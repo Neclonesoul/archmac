@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate shell syntax
+        run: |
+          bash -n install.sh
+          for file in bin/*; do
+            bash -n "$file"
+          done
+
+      - name: Verify required files
+        run: |
+          test -f README.md
+          test -f CHANGELOG.md
+          test -f docs/HARDWARE.md
+          test -f docs/KEYBINDS.md
+          test -f docs/MODES.md
+          test -f docs/RECOVERY.md
+          test -f config/hypr/hyprland.lua
+          test -f config/hypr/hyprlock.conf
+          test -f config/waybar/config.jsonc
+          test -f assets/wallpapers/archmac.png
+
+      - name: Verify executable helpers
+        run: |
+          for file in bin/* install.sh; do
+            test -x "$file"
+          done
+
+      - name: Reject private machine identifiers
+        run: |
+          if grep -RniE \
+            '/home/tyson|tyson@archmac|Moms Spaghetti|S24 Ultra|([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}|UUID=[A-Fa-f0-9-]{8,}' \
+            --exclude-dir=.git .; then
+            echo "Private or machine-specific identifier detected."
+            exit 1
+          fi
+
+      - name: Protect boot boundary
+        run: |
+          if grep -nEi \
+            'efibootmgr|bootctl|grub-install|mkfs|fdisk|parted|nvram' \
+            install.sh; then
+            echo "Boot/storage mutation detected in installer."
+            exit 1
+          fi
