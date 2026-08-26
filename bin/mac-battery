@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -e
+
+hyprctl eval '
+hl.config({
+    general = {
+        gaps_in = 2,
+        gaps_out = 4,
+        border_size = 1,
+    },
+
+    decoration = {
+        rounding = 6,
+        active_opacity = 1.0,
+        inactive_opacity = 1.0,
+
+        blur = {
+            enabled = false,
+        },
+
+        shadow = {
+            enabled = false,
+        },
+    },
+
+    animations = {
+        enabled = false,
+    },
+})
+'
+
+powerprofilesctl set power-saver
+
+printf '%s\n' battery > "${XDG_RUNTIME_DIR:-/tmp}/archmac-mode"
+
+notify-send \
+  "ARCHMAC · BATTERY" \
+  "Low compositor overhead · power-saver enabled"

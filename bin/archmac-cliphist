@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -u
+
+start_collector() {
+    local type="$1"
+    local pattern="^wl-paste --type ${type} --watch cliphist store$"
+
+    if ! pgrep -u "$UID" -f "$pattern" >/dev/null 2>&1; then
+        wl-paste --type "$type" --watch cliphist store \
+            >/dev/null 2>&1 &
+    fi
+}
+
+start_collector text
+start_collector image

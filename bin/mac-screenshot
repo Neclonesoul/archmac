@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="$HOME/Pictures/Screenshots"
+mkdir -p "$DIR"
+
+STAMP="$(date +'%Y-%m-%d_%H-%M-%S')"
+FILE="$DIR/ARCHMAC_$STAMP.png"
+
+case "${1:-full}" in
+    full)
+        grim "$FILE"
+        ;;
+    area)
+        GEOMETRY="$(slurp)" || exit 0
+        [[ -n "$GEOMETRY" ]] || exit 0
+        grim -g "$GEOMETRY" "$FILE"
+        ;;
+    *)
+        exit 2
+        ;;
+esac
+
+wl-copy --type image/png < "$FILE"
+
+notify-send \
+    -a "ARCHMAC" \
+    "Screenshot captured" \
+    "$(basename "$FILE") · copied to clipboard"

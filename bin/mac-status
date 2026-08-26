@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+echo
+echo " ARCHMAC STATUS"
+echo " ─────────────────────────────────────────"
+
+printf " Mode          : "
+cat "${XDG_RUNTIME_DIR:-/tmp}/archmac-mode" 2>/dev/null || echo "unknown"
+
+printf " Power profile : "
+powerprofilesctl get 2>/dev/null || echo "unknown"
+
+printf " Kernel        : "
+uname -r
+
+printf " Uptime        : "
+uptime -p
+
+echo
+echo " CPU"
+echo " ─────────────────────────────────────────"
+grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //'
+
+printf " Governor      : "
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "n/a"
+
+echo
+echo " MEMORY"
+echo " ─────────────────────────────────────────"
+free -h | awk 'NR==2 {printf " RAM           : %s used / %s total\n",$3,$2}'
+free -h | awk 'NR==3 && $2!="0B" {printf " Swap          : %s used / %s total\n",$3,$2}'
+
+echo
+echo " STORAGE"
+echo " ─────────────────────────────────────────"
+df -h / | awk 'NR==2 {printf " Root          : %s used / %s (%s)\n",$3,$2,$5}'
+
+echo
+echo " NETWORK"
+echo " ─────────────────────────────────────────"
+nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null |
+awk -F: '$1=="yes" {printf " Wi-Fi         : %s\n",$2}'
+
+echo
+echo " BATTERY"
+echo " ─────────────────────────────────────────"
+BAT="$(upower -e 2>/dev/null | grep battery | head -1)"
+if [ -n "$BAT" ]; then
+    upower -i "$BAT" |
+    awk -F: '
+      /state/      {gsub(/^ +/,"",$2); printf " State         : %s\n",$2}
+      /percentage/ {gsub(/^ +/,"",$2); printf " Charge        : %s\n",$2}
+      /time to/    {gsub(/^ +/,"",$2); printf " Time          : %s\n",$2}
+    '
+fi
+
+echo
+echo " TEMPERATURES"
+echo " ─────────────────────────────────────────"
+for z in /sys/class/thermal/thermal_zone*/temp; do
+    [ -r "$z" ] || continue
+    t=$(cat "$z")
+    printf " %-13s : %.1f°C\n" "$(basename "$(dirname "$z")")" "$(awk "BEGIN {print $t/1000}")"
+done 2>/dev/null
+
+echo
+echo " HYPRLAND"
+echo " ─────────────────────────────────────────"
+hyprctl version 2>/dev/null | head -1
+echo

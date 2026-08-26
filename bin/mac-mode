@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/archmac-mode"
+STATE="$(cat "$STATE_FILE" 2>/dev/null || echo fancy)"
+
+case "$STATE" in
+    fancy)
+        exec "$HOME/.local/bin/mac-performance"
+        ;;
+    performance|battery|*)
+        powerprofilesctl set balanced >/dev/null 2>&1 || true
+        exec "$HOME/.local/bin/mac-fancy"
+        ;;
+esac

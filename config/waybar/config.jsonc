@@ -1,0 +1,87 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 34,
+  "spacing": 8,
+
+  "modules-left": [
+    "hyprland/workspaces"
+  ],
+
+  "modules-center": [
+    "clock"
+  ],
+
+  "modules-right": [
+    "cpu",
+    "memory",
+    "temperature",
+    "network",
+    "pulseaudio",
+    "battery",
+    "tray"
+  ],
+
+  "hyprland/workspaces": {
+    "disable-scroll": true,
+    "all-outputs": true,
+    "format": "{name}"
+  },
+
+  "clock": {
+    "format": "󰥔  {:%H:%M}",
+    "format-alt": "{:%A, %d %B %Y}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+
+  "cpu": {
+    "format": "  {usage}%",
+    "tooltip": true
+  },
+
+  "memory": {
+    "format": "  {percentage}%",
+    "tooltip-format": "{used:0.1f} GiB / {total:0.1f} GiB"
+  },
+
+  "temperature": {
+    "thermal-zone": 1,
+    "critical-threshold": 85,
+    "format": "  {temperatureC}°C",
+    "tooltip-format": "CPU package: {temperatureC}°C"
+  },
+
+  "network": {
+    "format-wifi": "󰤨  {essid} {signalStrength}%",
+    "format-ethernet": "󰈀  LAN",
+    "format-disconnected": "󰤭  Offline",
+    "tooltip-format-wifi": "{essid}\n{ipaddr}\n{frequency} MHz",
+    "tooltip-format-ethernet": "{ipaddr}"
+  },
+
+  "pulseaudio": {
+    "format": "󰕾  {volume}%",
+    "format-muted": "󰖁  Muted",
+    "scroll-step": 5,
+    "on-click": "waybar-volume-menu",
+    "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+  },
+
+  "battery": {
+    "states": {
+      "warning": 30,
+      "critical": 15
+    },
+
+    "format": "󰁹  {capacity}%",
+    "format-charging": "󰂄  {capacity}%",
+    "format-plugged": "󰂄  {capacity}%",
+    "format-full": "󰁹  100%",
+
+    "tooltip-format": "{capacity}%\n{timeTo}\n{power:.1f} W"
+  },
+
+  "tray": {
+    "spacing": 8
+  }
+}

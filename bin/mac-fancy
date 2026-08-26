@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -e
+
+hyprctl eval '
+hl.config({
+    general = {
+        gaps_in = 5,
+        gaps_out = 10,
+        border_size = 2,
+    },
+
+    decoration = {
+        rounding = 12,
+        active_opacity = 1.0,
+        inactive_opacity = 0.94,
+
+        blur = {
+            enabled = true,
+            size = 5,
+            passes = 2,
+        },
+
+        shadow = {
+            enabled = true,
+            range = 18,
+            render_power = 3,
+        },
+    },
+
+    animations = {
+        enabled = true,
+    },
+})
+'
+
+printf '%s\n' fancy > "${XDG_RUNTIME_DIR:-/tmp}/archmac-mode"
+powerprofilesctl set balanced
+
+notify-send \
+  "ARCHMAC · FANCY" \
+  "Blur · shadows · transparency · animations enabled"

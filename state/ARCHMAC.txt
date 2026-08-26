@@ -1,0 +1,30 @@
+ARCHMAC — KNOWN-GOOD WORKSTATION
+Generated: 2026-08-26T13:49:05+02:00
+
+SYSTEM
+------
+Hostname: 
+Kernel: 7.1.9-arch1-2
+Architecture: x86_64
+
+DESKTOP
+-------
+Hyprland: Hyprland 0.56.2 built from branch v0.56.2 at commit efb50993780079460b0cbed1363e2166a2de1d9f clean ([gha] Nix: update inputs).
+Mode: fancy
+Power profile: balanced
+
+HARDWARE
+--------
+Machine: Apple MacBookPro9,2
+CPU: Intel Core i5-3210M
+Graphics: Intel HD Graphics 4000
+Memory: 15Gi
+Storage: KINGSTON SA400S37480G
+Arch root: /dev/sda3
+Arch root filesystem: ext4
+
+HEALTH
+------
+Hyprland config errors: 0
+Failed system units: 0
+Failed user units: 0
