@@ -45,7 +45,7 @@ jobs:
         run: |
           if grep -RniE \
             '/home/tyson|tyson@archmac|Moms Spaghetti|S24 Ultra|([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}|UUID=[A-Fa-f0-9-]{8,}' \
-            --exclude-dir=.git .; then
+            --exclude-dir=.git --exclude-dir=.github .; then
             echo "Private or machine-specific identifier detected."
             exit 1
           fi
