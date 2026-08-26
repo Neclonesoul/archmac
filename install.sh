@@ -75,6 +75,7 @@ mkdir -p \
     "$HOME/.config/kitty" \
     "$HOME/.config/gtk-3.0" \
     "$HOME/.config/gtk-4.0" \
+    "$HOME/.config/Thunar" \
     "$HOME/.config/archmac/wallpapers" \
     "$HOME/.local/bin"
 
@@ -83,6 +84,10 @@ cp -a "$REPO/config/waybar/." "$HOME/.config/waybar/"
 cp -a "$REPO/config/kitty/."  "$HOME/.config/kitty/"
 cp -a "$REPO/config/gtk-3.0/." "$HOME/.config/gtk-3.0/"
 cp -a "$REPO/config/gtk-4.0/." "$HOME/.config/gtk-4.0/"
+
+if [[ -d "$REPO/config/Thunar" ]]; then
+    cp -a "$REPO/config/Thunar/." "$HOME/.config/Thunar/"
+fi
 
 cp "$REPO/assets/wallpapers/archmac.png" \
    "$HOME/.config/archmac/wallpapers/archmac.png"

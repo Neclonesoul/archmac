@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.1
+
+- add `archmac-wallpaper` wallpaper manager
+- add Thunar **Set as ARCHMAC Wallpaper** action
+- persist selected wallpapers in ARCHMAC-managed storage
+- support PNG, JPG/JPEG, and WebP wallpapers
+- document wallpaper workflow
+
 ## v1.0.0
 
 Initial known-good ARCHMAC baseline.

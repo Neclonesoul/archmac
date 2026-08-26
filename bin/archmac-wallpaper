@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE="${1:-}"
+
+if [[ -z "$SOURCE" || ! -f "$SOURCE" ]]; then
+    notify-send "ARCHMAC Wallpaper" "No valid image selected"
+    exit 1
+fi
+
+case "${SOURCE,,}" in
+    *.png|*.jpg|*.jpeg|*.webp)
+        ;;
+    *)
+        notify-send "ARCHMAC Wallpaper" "Unsupported image format"
+        exit 1
+        ;;
+esac
+
+DEST_DIR="$HOME/.config/archmac/wallpapers"
+DEST="$DEST_DIR/current.${SOURCE##*.}"
+CONFIG="$HOME/.config/hypr/hyprpaper.conf"
+MONITOR="LVDS-1"
+
+mkdir -p "$DEST_DIR"
+
+# Remove previous managed current wallpaper.
+rm -f "$DEST_DIR"/current.png \
+      "$DEST_DIR"/current.jpg \
+      "$DEST_DIR"/current.jpeg \
+      "$DEST_DIR"/current.webp
+
+cp -- "$SOURCE" "$DEST"
+
+# Persist selection.
+cat > "$CONFIG" <<CONF
+splash = false
+ipc = on
+
+wallpaper {
+    monitor = $MONITOR
+    path = $DEST
+    fit_mode = cover
+}
+CONF
+
+# hyprpaper 0.8.x reliably picks up the new config after restart.
+pkill hyprpaper 2>/dev/null || true
+hyprpaper >/dev/null 2>&1 &
+
+notify-send \
+    "ARCHMAC Wallpaper" \
+    "Wallpaper changed to $(basename "$SOURCE")"

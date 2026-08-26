@@ -53,3 +53,16 @@ installation so a working EFI configuration is never casually replaced.
 ## Release
 
 The first release will be tagged `v1.0.0` only after repository validation.
+
+## Wallpaper workflow
+
+ARCHMAC integrates Hyprpaper with Thunar.
+
+Right-click a PNG, JPG, JPEG, or WebP image and select
+**Set as ARCHMAC Wallpaper** to apply it and persist the selection.
+
+The same operation is available from the terminal:
+
+    archmac-wallpaper /path/to/image.jpg
+
+See `docs/WALLPAPERS.md` for details.
