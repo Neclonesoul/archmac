@@ -47,6 +47,10 @@ ShellRoot {
         id: mediaService
     }
 
+    NetworkService {
+        id: networkService
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -69,6 +73,7 @@ ShellRoot {
             telemetry: telemetryService
             brightness: brightnessService
             media: mediaService
+            network: networkService
             clock: clockService
         }
     }

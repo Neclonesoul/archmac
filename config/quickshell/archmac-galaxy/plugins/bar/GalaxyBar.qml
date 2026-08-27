@@ -6,6 +6,7 @@ import Quickshell
 import "../workspaces"
 import "../tray"
 import "../../panels/controlcentre"
+import "../../panels/network"
 
 PanelWindow {
     id: bar
@@ -20,9 +21,11 @@ PanelWindow {
     required property var telemetry
     required property var brightness
     required property var media
+    required property var network
     required property var clock
 
     property bool controlCentreOpen: false
+    property bool networkPanelOpen: false
 
     ControlCentre {
         theme: bar.theme
@@ -36,6 +39,17 @@ PanelWindow {
 
         onCloseRequested:
             bar.controlCentreOpen = false
+    }
+
+    NetworkPanel {
+        shellScreen: bar.shellScreen
+        theme: bar.theme
+        network: bar.network
+
+        opened: bar.networkPanelOpen
+
+        onCloseRequested:
+            bar.networkPanelOpen = false
     }
 
     screen: shellScreen
@@ -212,6 +226,57 @@ PanelWindow {
                     font.family: "0xProto"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
+                }
+            }
+
+            Rectangle {
+                id: networkCapsule
+
+                implicitWidth:
+                    networkText.implicitWidth + 16
+
+                implicitHeight: 22
+
+                radius: theme.radiusSmall
+
+                color:
+                    networkMouse.containsMouse
+                        ? "#20FFFFFF"
+                        : theme.surfaceRaised
+
+                Text {
+                    id: networkText
+
+                    anchors.centerIn: parent
+
+                    text: network.shortLabel
+
+                    color:
+                        network.connectionType === "offline"
+                            ? "#FFD166"
+                            : theme.textSecondary
+
+                    font.family: "0xProto"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                }
+
+                MouseArea {
+                    id: networkMouse
+
+                    anchors.fill: parent
+
+                    hoverEnabled: true
+
+                    cursorShape:
+                        Qt.PointingHandCursor
+
+                    onClicked: {
+                        bar.controlCentreOpen = false
+
+                        bar.networkPanelOpen =
+                            !bar.networkPanelOpen
+                    }
                 }
             }
 
