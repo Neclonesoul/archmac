@@ -37,6 +37,7 @@ PanelWindow {
         media: bar.media
         network: bar.network
         bluetooth: bar.bluetooth
+        mode: bar.mode
 
         opened: bar.controlCentreOpen
 
@@ -301,7 +302,10 @@ PanelWindow {
                 implicitHeight: 22
 
                 radius: theme.radiusSmall
-                color: theme.surfaceRaised
+
+                color: modeMouse.containsMouse
+                    ? "#20FFFFFF"
+                    : theme.surfaceRaised
 
                 Text {
                     id: modeLabel
@@ -310,10 +314,28 @@ PanelWindow {
 
                     text: mode.current.toUpperCase()
 
-                    color: theme.textSecondary
+                    color:
+                        mode.current === mode.battery
+                            ? "#FFD166"
+                            : mode.current === mode.performance
+                                ? theme.accent
+                                : theme.textSecondary
+
                     font.family: "0xProto"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
+                }
+
+                MouseArea {
+                    id: modeMouse
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+
+                    cursorShape: Qt.PointingHandCursor
+
+                    onClicked:
+                        mode.next()
                 }
             }
 

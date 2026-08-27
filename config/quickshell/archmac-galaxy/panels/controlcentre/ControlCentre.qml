@@ -14,6 +14,7 @@ PanelWindow {
     required property var media
     required property var network
     required property var bluetooth
+    required property var mode
 
     property bool opened: false
 
@@ -32,7 +33,7 @@ PanelWindow {
     }
 
     implicitWidth: 350
-    implicitHeight: media.available ? 425 : 345
+    implicitHeight: media.available ? 500 : 420
 
     exclusiveZone: 0
     aboveWindows: true
@@ -264,6 +265,83 @@ PanelWindow {
                             apply(mouse.x)
                     }
                 }
+            }
+
+            Text {
+                text: "MODE"
+
+                color: theme.textMuted
+                font.pixelSize: 8
+                font.letterSpacing: 0.7
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: [
+                        "fancy",
+                        "balanced",
+                        "performance",
+                        "battery"
+                    ]
+
+                    delegate: Rectangle {
+                        required property string modelData
+
+                        Layout.fillWidth: true
+                        implicitHeight: 42
+
+                        radius: theme.radiusMedium
+
+                        color:
+                            mode.current === modelData
+                                ? "#283EA6FF"
+                                : theme.surfaceRaised
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 2
+
+                            Text {
+                                anchors.horizontalCenter:
+                                    parent.horizontalCenter
+
+                                text:
+                                    modelData.toUpperCase()
+
+                                color:
+                                    mode.current === modelData
+                                        ? theme.textPrimary
+                                        : theme.textSecondary
+
+                                font.family: "0xProto"
+                                font.pixelSize: 7
+                                font.weight: Font.DemiBold
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+
+                            cursorShape:
+                                Qt.PointingHandCursor
+
+                            onClicked:
+                                mode.apply(modelData)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+
+                text: mode.description
+
+                color: theme.textMuted
+                font.pixelSize: 8
             }
 
             Text {
