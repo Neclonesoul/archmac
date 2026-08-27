@@ -51,6 +51,10 @@ ShellRoot {
         id: networkService
     }
 
+    BluetoothService {
+        id: bluetoothService
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -74,6 +78,7 @@ ShellRoot {
             brightness: brightnessService
             media: mediaService
             network: networkService
+            bluetooth: bluetoothService
             clock: clockService
         }
     }
