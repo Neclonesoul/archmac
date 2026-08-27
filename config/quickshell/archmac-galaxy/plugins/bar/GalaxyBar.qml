@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 
 import "../workspaces"
+import "../tray"
 
 PanelWindow {
     id: bar
@@ -188,6 +189,19 @@ PanelWindow {
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
                 }
+            }
+
+            SystemTrayWidget {
+                theme: bar.theme
+                hostWindow: bar
+
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Rectangle {
+                width: 1
+                height: 14
+                color: "#24FFFFFF"
             }
 
             Rectangle {
