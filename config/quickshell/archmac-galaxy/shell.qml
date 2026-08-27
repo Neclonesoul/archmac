@@ -35,6 +35,10 @@ ShellRoot {
         id: audioService
     }
 
+    SystemTelemetryService {
+        id: telemetryService
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -54,6 +58,7 @@ ShellRoot {
             workspaces: workspaceService
             power: powerService
             audio: audioService
+            telemetry: telemetryService
             clock: clockService
         }
     }

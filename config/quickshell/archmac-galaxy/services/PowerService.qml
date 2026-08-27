@@ -11,9 +11,10 @@ QtObject {
         && battery.ready
         && battery.isLaptopBattery
 
+    // Quickshell exposes UPower percentage as a 0.0–1.0 ratio.
     readonly property int percentage:
         available
-            ? Math.round(battery.percentage)
+            ? Math.round(battery.percentage * 100)
             : -1
 
     readonly property bool charging:

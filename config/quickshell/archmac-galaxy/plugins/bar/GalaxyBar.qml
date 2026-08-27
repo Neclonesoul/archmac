@@ -15,6 +15,7 @@ PanelWindow {
     required property var workspaces
     required property var power
     required property var audio
+    required property var telemetry
     required property var clock
 
     screen: shellScreen
@@ -78,6 +79,30 @@ PanelWindow {
 
             Item {
                 Layout.fillWidth: true
+            }
+
+            Rectangle {
+                implicitWidth: telemetryText.implicitWidth + 16
+                implicitHeight: 22
+
+                radius: theme.radiusSmall
+                color: theme.surfaceRaised
+
+                Text {
+                    id: telemetryText
+                    anchors.centerIn: parent
+
+                    text: telemetry.compactLabel
+
+                    color:
+                        telemetry.temperatureC >= 85
+                            ? "#FF6B6B"
+                            : theme.textMuted
+
+                    font.family: "0xProto"
+                    font.pixelSize: 8
+                    font.weight: Font.Medium
+                }
             }
 
             Rectangle {
