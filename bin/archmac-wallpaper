@@ -18,7 +18,7 @@ case "${SOURCE,,}" in
 esac
 
 DEST_DIR="$HOME/.config/archmac/wallpapers"
-DEST="$DEST_DIR/current.${SOURCE##*.}"
+DEST="$DEST_DIR/current.jpg"
 CONFIG="$HOME/.config/hypr/hyprpaper.conf"
 MONITOR="LVDS-1"
 
@@ -30,7 +30,11 @@ rm -f "$DEST_DIR"/current.png \
       "$DEST_DIR"/current.jpeg \
       "$DEST_DIR"/current.webp
 
-cp -- "$SOURCE" "$DEST"
+if command -v magick >/dev/null 2>&1; then
+    magick "$SOURCE" -auto-orient -quality 95 "$DEST"
+else
+    cp -- "$SOURCE" "$DEST"
+fi
 
 # Persist selection.
 cat > "$CONFIG" <<CONF
