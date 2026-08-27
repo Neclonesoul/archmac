@@ -5,6 +5,7 @@ import Quickshell
 
 import "../workspaces"
 import "../tray"
+import "../../panels/controlcentre"
 
 PanelWindow {
     id: bar
@@ -17,7 +18,25 @@ PanelWindow {
     required property var power
     required property var audio
     required property var telemetry
+    required property var brightness
+    required property var media
     required property var clock
+
+    property bool controlCentreOpen: false
+
+    ControlCentre {
+        theme: bar.theme
+        audio: bar.audio
+        power: bar.power
+        brightness: bar.brightness
+        telemetry: bar.telemetry
+        media: bar.media
+
+        opened: bar.controlCentreOpen
+
+        onCloseRequested:
+            bar.controlCentreOpen = false
+    }
 
     screen: shellScreen
 
@@ -144,8 +163,13 @@ PanelWindow {
                     cursorShape: Qt.PointingHandCursor
 
                     onClicked: mouse => {
-                        if (mouse.button === Qt.RightButton)
+                        if (mouse.button === Qt.RightButton) {
                             audio.toggleMute()
+                            return
+                        }
+
+                        bar.controlCentreOpen =
+                            !bar.controlCentreOpen
                     }
 
                     onWheel: wheel => {

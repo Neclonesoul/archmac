@@ -1,0 +1,522 @@
+import QtQuick
+import QtQuick.Layouts
+
+import Quickshell
+
+PanelWindow {
+    id: panel
+
+    required property var theme
+    required property var audio
+    required property var power
+    required property var brightness
+    required property var telemetry
+    required property var media
+
+    property bool opened: false
+
+    signal closeRequested()
+
+    visible: opened
+
+    anchors {
+        top: true
+        right: true
+    }
+
+    margins {
+        top: 40
+        right: 8
+    }
+
+    implicitWidth: 350
+    implicitHeight: media.available ? 355 : 275
+
+    exclusiveZone: 0
+    aboveWindows: true
+
+    color: "transparent"
+
+    Rectangle {
+        anchors.fill: parent
+
+        radius: theme.radiusLarge + 5
+        color: theme.surfaceOverlay
+
+        border.width: 1
+        border.color: theme.border
+
+        opacity: panel.opened ? 1 : 0
+        scale: panel.opened ? 1 : 0.96
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 130
+            }
+        }
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: 150
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 13
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "SYSTEM"
+
+                    color: theme.textPrimary
+
+                    font.family: "0xProto"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Text {
+                    text: "×"
+
+                    color: closeMouse.containsMouse
+                        ? theme.textPrimary
+                        : theme.textMuted
+
+                    font.pixelSize: 20
+
+                    MouseArea {
+                        id: closeMouse
+
+                        anchors.fill: parent
+                        anchors.margins: -8
+
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        onClicked:
+                            panel.closeRequested()
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 1
+                color: "#20FFFFFF"
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "VOLUME"
+                    color: theme.textMuted
+                    font.pixelSize: 9
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Text {
+                    text: audio.shortLabel
+                    color: theme.textPrimary
+                    font.family: "0xProto"
+                    font.pixelSize: 10
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+
+                        cursorShape: Qt.PointingHandCursor
+
+                        onClicked:
+                            audio.toggleMute()
+                    }
+                }
+            }
+
+            Rectangle {
+                id: volumeTrack
+
+                Layout.fillWidth: true
+                implicitHeight: 9
+
+                radius: 5
+                color: "#22FFFFFF"
+
+                Rectangle {
+                    height: parent.height
+                    radius: parent.radius
+
+                    width:
+                        audio.volume >= 0
+                            ? parent.width
+                              * Math.max(
+                                    0,
+                                    Math.min(
+                                        1,
+                                        audio.volume / 100
+                                    )
+                                )
+                            : 0
+
+                    color: theme.accent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+
+                    function apply(x) {
+                        audio.setVolume(
+                            Math.max(
+                                0,
+                                Math.min(1, x / width)
+                            )
+                        )
+                    }
+
+                    onPressed:
+                        mouse => apply(mouse.x)
+
+                    onPositionChanged: mouse => {
+                        if (pressed)
+                            apply(mouse.x)
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+
+                Text {
+                    text: "BRIGHTNESS"
+                    color: theme.textMuted
+                    font.pixelSize: 9
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Text {
+                    text:
+                        brightness.percentage >= 0
+                            ? brightness.percentage + "%"
+                            : "--"
+
+                    color: theme.textPrimary
+                    font.family: "0xProto"
+                    font.pixelSize: 10
+                }
+            }
+
+            Rectangle {
+                id: brightnessTrack
+
+                Layout.fillWidth: true
+                implicitHeight: 9
+
+                radius: 5
+                color: "#22FFFFFF"
+
+                Rectangle {
+                    height: parent.height
+                    radius: parent.radius
+
+                    width:
+                        brightness.percentage >= 0
+                            ? parent.width
+                              * brightness.percentage / 100
+                            : 0
+
+                    color: theme.accent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+
+                    function apply(x) {
+                        brightness.setPercentage(
+                            x / width * 100
+                        )
+                    }
+
+                    onPressed:
+                        mouse => apply(mouse.x)
+
+                    onPositionChanged: mouse => {
+                        if (pressed)
+                            apply(mouse.x)
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+
+                    radius: theme.radiusMedium
+                    color: theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "CPU"
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text:
+                                telemetry.cpuPercent >= 0
+                                    ? telemetry.cpuPercent + "%"
+                                    : "--"
+
+                            color: theme.textPrimary
+                            font.family: "0xProto"
+                            font.pixelSize: 13
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+
+                    radius: theme.radiusMedium
+                    color: theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "MEMORY"
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text:
+                                telemetry.memoryPercent >= 0
+                                    ? telemetry.memoryPercent + "%"
+                                    : "--"
+
+                            color: theme.textPrimary
+                            font.family: "0xProto"
+                            font.pixelSize: 13
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+
+                    radius: theme.radiusMedium
+                    color: theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "TEMP"
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text:
+                                telemetry.temperatureC >= 0
+                                    ? telemetry.temperatureC + "°C"
+                                    : "--"
+
+                            color:
+                                telemetry.temperatureC >= 85
+                                    ? "#FF6B6B"
+                                    : theme.textPrimary
+
+                            font.family: "0xProto"
+                            font.pixelSize: 13
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+
+                    radius: theme.radiusMedium
+                    color: theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "BATTERY"
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text:
+                                power.percentage >= 0
+                                    ? power.percentage + "%"
+                                    : "--"
+
+                            color: theme.textPrimary
+                            font.family: "0xProto"
+                            font.pixelSize: 13
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: media.available ? 74 : 0
+
+                visible: media.available
+
+                radius: theme.radiusMedium
+                color: theme.surfaceRaised
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 11
+                    spacing: 12
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            Layout.fillWidth: true
+
+                            text: media.title
+
+                            elide: Text.ElideRight
+
+                            color: theme.textPrimary
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+
+                            text: media.artist
+
+                            elide: Text.ElideRight
+
+                            color: theme.textMuted
+                            font.pixelSize: 9
+                        }
+                    }
+
+                    Text {
+                        text: "‹"
+                        color: theme.textSecondary
+                        font.pixelSize: 22
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -7
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: media.previous()
+                        }
+                    }
+
+                    Text {
+                        text:
+                            media.playing
+                                ? "Ⅱ"
+                                : "▶"
+
+                        color: theme.textPrimary
+                        font.pixelSize: 16
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -7
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: media.toggle()
+                        }
+                    }
+
+                    Text {
+                        text: "›"
+                        color: theme.textSecondary
+                        font.pixelSize: 22
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -7
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: media.next()
+                        }
+                    }
+                }
+            }
+
+            Item {
+                Layout.fillHeight: true
+            }
+
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+
+                text: "ARCHMAC · GALAXY"
+
+                color: "#59616C"
+                font.pixelSize: 8
+                font.letterSpacing: 1.2
+            }
+        }
+    }
+}
