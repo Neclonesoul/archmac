@@ -24,7 +24,7 @@ PanelWindow {
     anchors {
         left: true
         right: true
-        bottom: true
+        top: true
     }
 
     implicitHeight: 34
