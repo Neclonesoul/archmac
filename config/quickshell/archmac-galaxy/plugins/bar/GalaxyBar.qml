@@ -13,6 +13,8 @@ PanelWindow {
     required property var mode
     required property var hardware
     required property var workspaces
+    required property var power
+    required property var audio
     required property var clock
 
     screen: shellScreen
@@ -48,7 +50,7 @@ PanelWindow {
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
-            spacing: 8
+            spacing: 7
 
             Text {
                 text: "ARCHMAC"
@@ -78,32 +80,89 @@ PanelWindow {
                 Layout.fillWidth: true
             }
 
-            Text {
-                text: {
-                    if (workspaces.direction > 0)
-                        return "→"
-                    if (workspaces.direction < 0)
-                        return "←"
+            Rectangle {
+                id: audioCapsule
 
-                    return "·"
+                implicitWidth: audioText.implicitWidth + 16
+                implicitHeight: 22
+
+                radius: theme.radiusSmall
+
+                color: audioMouse.containsMouse
+                    ? "#20FFFFFF"
+                    : theme.surfaceRaised
+
+                Text {
+                    id: audioText
+
+                    anchors.centerIn: parent
+
+                    text: audio.shortLabel
+
+                    color: audio.muted
+                        ? theme.textMuted
+                        : theme.textSecondary
+
+                    font.family: "0xProto"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
                 }
 
-                color: theme.textMuted
-                font.pixelSize: 12
+                MouseArea {
+                    id: audioMouse
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: 120
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                    cursorShape: Qt.PointingHandCursor
+
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton)
+                            audio.toggleMute()
+                    }
+
+                    onWheel: wheel => {
+                        if (wheel.angleDelta.y > 0)
+                            audio.changeVolume(0.05)
+                        else if (wheel.angleDelta.y < 0)
+                            audio.changeVolume(-0.05)
                     }
                 }
             }
 
-            Text {
-                text: hardware.model
+            Rectangle {
+                implicitWidth: batteryText.implicitWidth + 16
+                implicitHeight: 22
 
-                color: theme.textMuted
-                font.family: "0xProto"
-                font.pixelSize: 9
+                radius: theme.radiusSmall
+
+                color: theme.surfaceRaised
+
+                Text {
+                    id: batteryText
+
+                    anchors.centerIn: parent
+
+                    text: power.shortLabel
+
+                    color: {
+                        if (power.percentage < 0)
+                            return theme.textMuted
+
+                        if (power.percentage <= 15)
+                            return "#FF6B6B"
+
+                        if (power.percentage <= 30)
+                            return "#FFD166"
+
+                        return theme.textSecondary
+                    }
+
+                    font.family: "0xProto"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                }
             }
 
             Rectangle {
@@ -131,6 +190,7 @@ PanelWindow {
                 text: Qt.formatDateTime(clock.date, "HH:mm")
 
                 color: theme.textPrimary
+
                 font.family: "0xProto"
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
