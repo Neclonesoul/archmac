@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
+STATE_FILE="$STATE_DIR/mode"
+
+mkdir -p "$STATE_DIR"
+
+current_mode() {
+    if [[ -r "$STATE_FILE" ]]; then
+        cat "$STATE_FILE"
+    else
+        printf '%s\n' "balanced"
+    fi
+}
+
+persist_mode() {
+    local mode="$1"
+
+    printf '%s\n' "$mode" > "$STATE_FILE"
+}
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+run_if_present() {
+    local command="$1"
+
+    if [[ -x "$HOME/.local/bin/$command" ]]; then
+        "$HOME/.local/bin/$command"
+        return
+    fi
+
+    if [[ -x "$(dirname "$0")/$command" ]]; then
+        "$(dirname "$0")/$command"
+        return
+    fi
+
+    echo "ARCHMAC: missing $command" >&2
+    exit 1
+}
+
+apply_fancy() {
+    run_if_present mac-fancy
+
+    if have powerprofilesctl; then
+        powerprofilesctl set balanced || true
+    fi
+
+    persist_mode fancy
+}
+
+apply_performance() {
+    run_if_present mac-performance
+
+    if have powerprofilesctl; then
+        powerprofilesctl set performance || true
+    fi
+
+    persist_mode performance
+}
+
+apply_battery() {
+    run_if_present mac-battery
+
+    if have powerprofilesctl; then
+        powerprofilesctl set power-saver || true
+    fi
+
+    persist_mode battery
+}
+
+apply_balanced() {
+    # Start from the known-good Fancy configuration and then
+    # reduce expensive compositor effects. This means Balanced
+    # inherits the tested Fancy baseline instead of maintaining
+    # an unrelated fourth configuration.
+    run_if_present mac-fancy
+
+    if have powerprofilesctl; then
+        powerprofilesctl set balanced || true
+    fi
+
+    if have hyprctl; then
+        hyprctl eval '
+            hl.config({
+                decoration = {
+                    blur = {
+                        enabled = true,
+                        size = 4,
+                        passes = 1,
+                    },
+                    shadow = {
+                        enabled = true,
+                        range = 12,
+                        render_power = 3,
+                    },
+                },
+                animations = {
+                    enabled = true,
+                },
+            })
+        ' >/dev/null
+    fi
+
+    persist_mode balanced
+}
+
+case "${1:-status}" in
+    fancy)
+        apply_fancy
+        ;;
+
+    balanced)
+        apply_balanced
+        ;;
+
+    performance)
+        apply_performance
+        ;;
+
+    battery)
+        apply_battery
+        ;;
+
+    toggle)
+        case "$(current_mode)" in
+            fancy)
+                apply_performance
+                ;;
+            performance)
+                apply_fancy
+                ;;
+            *)
+                apply_fancy
+                ;;
+        esac
+        ;;
+
+    next)
+        case "$(current_mode)" in
+            fancy)
+                apply_balanced
+                ;;
+            balanced)
+                apply_performance
+                ;;
+            performance)
+                apply_battery
+                ;;
+            battery|*)
+                apply_fancy
+                ;;
+        esac
+        ;;
+
+    status)
+        current_mode
+        ;;
+
+    *)
+        echo "Usage: archmac-mode {fancy|balanced|performance|battery|toggle|next|status}" >&2
+        exit 2
+        ;;
+esac
