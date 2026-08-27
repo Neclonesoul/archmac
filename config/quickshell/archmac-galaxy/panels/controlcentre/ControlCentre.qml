@@ -12,6 +12,8 @@ PanelWindow {
     required property var brightness
     required property var telemetry
     required property var media
+    required property var network
+    required property var bluetooth
 
     property bool opened: false
 
@@ -30,7 +32,7 @@ PanelWindow {
     }
 
     implicitWidth: 350
-    implicitHeight: media.available ? 355 : 275
+    implicitHeight: media.available ? 425 : 345
 
     exclusiveZone: 0
     aboveWindows: true
@@ -260,6 +262,167 @@ PanelWindow {
                     onPositionChanged: mouse => {
                         if (pressed)
                             apply(mouse.x)
+                    }
+                }
+            }
+
+            Text {
+                text: "CONNECTIVITY"
+
+                color: theme.textMuted
+                font.pixelSize: 8
+                font.letterSpacing: 0.7
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 58
+
+                    radius: theme.radiusMedium
+
+                    color:
+                        network.wifiEnabled
+                            ? "#203EA6FF"
+                            : theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "WI-FI"
+
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: {
+                                if (!network.wifiEnabled)
+                                    return "OFF"
+
+                                if (network.wifiConnected)
+                                    return network.signalPercent + "%"
+
+                                return "ON"
+                            }
+
+                            color: theme.textPrimary
+                            font.family: "0xProto"
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            width: 130
+
+                            text:
+                                network.wifiConnected
+                                    ? network.ssid
+                                    : network.detailLabel
+
+                            elide: Text.ElideRight
+                            horizontalAlignment:
+                                Text.AlignHCenter
+
+                            color: theme.textMuted
+                            font.pixelSize: 7
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape:
+                            Qt.PointingHandCursor
+
+                        onClicked:
+                            network.toggleWifi()
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 58
+
+                    radius: theme.radiusMedium
+
+                    color:
+                        bluetooth.enabled
+                            ? "#203EA6FF"
+                            : theme.surfaceRaised
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: "BLUETOOTH"
+
+                            color: theme.textMuted
+                            font.pixelSize: 8
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text: {
+                                if (!bluetooth.available)
+                                    return "--"
+
+                                if (!bluetooth.enabled)
+                                    return "OFF"
+
+                                if (bluetooth.connectedDevices > 0)
+                                    return bluetooth.connectedDevices
+                                        + " CONNECTED"
+
+                                return "ON"
+                            }
+
+                            color: theme.textPrimary
+                            font.family: "0xProto"
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            anchors.horizontalCenter:
+                                parent.horizontalCenter
+
+                            text:
+                                bluetooth.enabled
+                                    ? "BlueZ"
+                                    : "Radio disabled"
+
+                            color: theme.textMuted
+                            font.pixelSize: 7
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape:
+                            Qt.PointingHandCursor
+
+                        onClicked:
+                            bluetooth.toggleEnabled()
                     }
                 }
             }

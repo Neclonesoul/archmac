@@ -7,7 +7,6 @@ import "../workspaces"
 import "../tray"
 import "../../panels/controlcentre"
 import "../../panels/network"
-import "../../panels/bluetooth"
 
 PanelWindow {
     id: bar
@@ -28,7 +27,6 @@ PanelWindow {
 
     property bool controlCentreOpen: false
     property bool networkPanelOpen: false
-    property bool bluetoothPanelOpen: false
 
     ControlCentre {
         theme: bar.theme
@@ -37,6 +35,8 @@ PanelWindow {
         brightness: bar.brightness
         telemetry: bar.telemetry
         media: bar.media
+        network: bar.network
+        bluetooth: bar.bluetooth
 
         opened: bar.controlCentreOpen
 
@@ -53,17 +53,6 @@ PanelWindow {
 
         onCloseRequested:
             bar.networkPanelOpen = false
-    }
-
-    BluetoothPanel {
-        shellScreen: bar.shellScreen
-        theme: bar.theme
-        bluetooth: bar.bluetooth
-
-        opened: bar.bluetoothPanelOpen
-
-        onCloseRequested:
-            bar.bluetoothPanelOpen = false
     }
 
     screen: shellScreen
@@ -290,57 +279,6 @@ PanelWindow {
 
                         bar.networkPanelOpen =
                             !bar.networkPanelOpen
-                    }
-                }
-            }
-
-            Rectangle {
-                id: bluetoothCapsule
-
-                implicitWidth:
-                    bluetoothText.implicitWidth + 16
-
-                implicitHeight: 22
-
-                radius: theme.radiusSmall
-
-                color:
-                    bluetoothMouse.containsMouse
-                        ? "#20FFFFFF"
-                        : theme.surfaceRaised
-
-                Text {
-                    id: bluetoothText
-
-                    anchors.centerIn: parent
-
-                    text: bluetooth.shortLabel
-
-                    color:
-                        bluetooth.enabled
-                            ? theme.textSecondary
-                            : theme.textMuted
-
-                    font.family: "0xProto"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
-                }
-
-                MouseArea {
-                    id: bluetoothMouse
-
-                    anchors.fill: parent
-                    hoverEnabled: true
-
-                    cursorShape:
-                        Qt.PointingHandCursor
-
-                    onClicked: {
-                        bar.controlCentreOpen = false
-                        bar.networkPanelOpen = false
-
-                        bar.bluetoothPanelOpen =
-                            !bar.bluetoothPanelOpen
                     }
                 }
             }
