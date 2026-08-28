@@ -9,6 +9,7 @@ import "services"
 import "plugins/bar"
 import "osd"
 import "notifications"
+import "launcher"
 
 ShellRoot {
     id: root
@@ -65,6 +66,10 @@ ShellRoot {
         id: notificationService
     }
 
+    LauncherService {
+        id: launcherService
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -115,6 +120,18 @@ ShellRoot {
                 mode,
                 description
             )
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        GalaxyLauncher {
+            required property var modelData
+
+            shellScreen: modelData
+            theme: themeService
+            launcher: launcherService
         }
     }
 

@@ -30,7 +30,7 @@ hl.monitor({
 -- Set programs that you use
 local terminal    = "kitty"
 local fileManager = "thunar"
-local menu = "wofi --show drun"
+local menu = "qs -c archmac-galaxy ipc call launcher toggle"
 
 
 -------------------
@@ -42,7 +42,7 @@ local menu = "wofi --show drun"
 -- Autostart necessary processes (like notifications daemons, status bars, etc.)
 -- Or execute your favorite apps at launch like this:
 --
--- hl.on("hyprland.start", function () 
+-- hl.on("hyprland.start", function ()
 --   hl.exec_cmd(terminal)
 --   hl.exec_cmd("nm-applet")
 -- end)
@@ -104,7 +104,7 @@ hl.config({
         -- Please see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Tearing/ before you turn this on
         allow_tearing = false,
 
-        layout = "dwindle",
+        layout = "scrolling",
     },
 
     decoration = {
@@ -206,7 +206,28 @@ hl.config({
 
 -- See https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/ for more
 hl.config({
+
     scrolling = {
+        -- ARCHMAC scrolling layout
+        --
+        -- 0.60 gives a focused window useful working width on the
+        -- MacBookPro9,2 1280x800 panel while retaining spatial context.
+        column_width = 0.60,
+
+        -- Bring newly focused columns completely into view.
+        focus_fit_method = 1,
+        follow_focus = true,
+        follow_min_visible = 0.40,
+
+        -- Natural horizontal tape.
+        direction = "right",
+
+        -- Useful width presets:
+        -- 1/3, half, 60%, 2/3 and fullscreen-width.
+        explicit_column_widths = "0.333, 0.5, 0.6, 0.667, 1.0",
+
+        wrap_focus = true,
+        wrap_swapcol = true,
         fullscreen_on_one_column = true,
     },
 })
@@ -279,6 +300,9 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("firefox"))
+hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("pavucontrol"))
+hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("qalculate-gtk"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
 
@@ -331,17 +355,17 @@ hl.bind("XF86KbdBrightnessDown",
     { locked = true, repeating = true })
 
 -- ARCHMAC Fancy / Performance toggle
-hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("mac-mode"))
+hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-mode"))
 
 -- Lock
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 
 -- Screenshots
 hl.bind(mainMod .. " + SHIFT + 3",
-    hl.dsp.exec_cmd("mac-screenshot full"))
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-screenshot full"))
 
 hl.bind(mainMod .. " + SHIFT + 4",
-    hl.dsp.exec_cmd("mac-screenshot area"))
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-screenshot area"))
 
 -- Clipboard history
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
@@ -405,29 +429,57 @@ hl.window_rule({
 
 hl.on("hyprland.start", function ()
  hl.exec_cmd("waybar")
- hl.exec_cmd("hyprpaper")
+
+
+
+
+
+
+-- Scrolling navigation
+--
+-- Super + , / .          focus previous / next column
+-- Super + Shift + , / .  move column left / right
+
+hl.bind(mainMod .. " + comma", hl.dsp.layout("focus l"))
+hl.bind(mainMod .. " + period", hl.dsp.layout("focus r"))
+
+hl.bind(mainMod .. " + SHIFT + comma", hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + SHIFT + period", hl.dsp.layout("swapcol r"))
+hl.exec_cmd("hyprpaper")
  hl.exec_cmd("nm-applet")
  hl.exec_cmd("blueman-applet")
     hl.exec_cmd("mako")
  hl.exec_cmd("hypridle")
-hl.exec_cmd("archmac-cliphist")
+hl.exec_cmd("/home/tyson/.local/bin/archmac-cliphist")
 end)
 
 ----------------------
 -- ARCHMAC MODE BINDS
+
+
+-- ARCHMAC v1.1 layout toggle
+--
+-- Super + G:
+-- scrolling <-> dwindle
+hl.bind(
+    mainMod .. " + G",
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/archmac-layout-toggle")
+)
+
+
 ----------------------
 
 -- Fancy <-> Performance
 hl.bind("SUPER + F12",
-    hl.dsp.exec_cmd("mac-mode"))
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-mode"))
 
 -- Explicit battery mode
 hl.bind("SUPER + SHIFT + F12",
-    hl.dsp.exec_cmd("mac-battery"))
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-battery"))
 
 -- Explicit Fancy restore
 hl.bind("SUPER + CTRL + F12",
-    hl.dsp.exec_cmd("mac-fancy"))
+    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-fancy"))
 
 --------------------------
 -- ARCHMAC LAYER POLISH
