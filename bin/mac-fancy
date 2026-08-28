@@ -36,10 +36,11 @@ hl.config({
 printf '%s\n' fancy > "${XDG_RUNTIME_DIR:-/tmp}/archmac-mode"
 powerprofilesctl set balanced
 
-notify-send \
-  "ARCHMAC · FANCY" \
-  "Blur · shadows · transparency · animations enabled"
-
 # Keep Galaxy ModeService synchronized with legacy keybind execution.
 mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
 printf '%s\n' "fancy" > "${XDG_STATE_HOME:-$HOME/.local/state}/archmac/mode"
+
+# Galaxy transient mode event.
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
+mkdir -p "$STATE_DIR"
+printf '%s\n' "fancy $(date +%s%N)" > "$STATE_DIR/mode-event"

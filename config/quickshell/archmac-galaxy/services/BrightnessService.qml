@@ -1,57 +1,73 @@
 import QtQuick
+
 import Quickshell
 import Quickshell.Io
 
 QtObject {
     id: service
 
-    property int percentage: -1
+    readonly property string brightnessPath:
+        "/sys/class/backlight/intel_backlight/brightness"
 
-    property Process reader: Process {
-        command: [
-            "brightnessctl",
-            "-m"
-        ]
+    readonly property string maxBrightnessPath:
+        "/sys/class/backlight/intel_backlight/max_brightness"
 
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const fields = this.text.trim().split(",")
+    property int rawValue: -1
+    property int rawMaximum: -1
 
-                if (fields.length < 4)
-                    return
+    readonly property int percentage:
+        rawValue >= 0 && rawMaximum > 0
+            ? Math.round(
+                (rawValue / rawMaximum) * 100
+            )
+            : -1
 
-                const value = parseInt(
-                    fields[3].replace("%", "")
-                )
+    function readInteger(view) {
+        const value =
+            parseInt(view.text().trim())
 
-                if (!isNaN(value))
-                    service.percentage = value
-            }
+        return isNaN(value)
+            ? -1
+            : value
+    }
+
+    property FileView maximumFile: FileView {
+        path: service.maxBrightnessPath
+
+        onLoaded: {
+            service.rawMaximum =
+                service.readInteger(this)
         }
     }
 
-    /*
-     * Brightness may also be changed by existing Hyprland
-     * hardware-key bindings, so refresh at a deliberately slow
-     * cadence instead of placing polling in individual widgets.
-     */
-    property Timer refreshTimer: Timer {
-        interval: 3000
-        repeat: true
-        running: true
-        triggeredOnStart: true
+    property FileView brightnessFile: FileView {
+        path: service.brightnessPath
+        watchChanges: true
 
-        onTriggered: {
-            if (!service.reader.running)
-                service.reader.running = true
+        onLoaded: {
+            service.rawValue =
+                service.readInteger(this)
+        }
+
+        onFileChanged: {
+            reload()
+        }
+
+        onTextChanged: {
+            service.rawValue =
+                service.readInteger(this)
         }
     }
 
     function setPercentage(value) {
         const bounded =
-            Math.max(5, Math.min(100, Math.round(value)))
-
-        percentage = bounded
+            Math.max(
+                5,
+                Math.min(
+                    100,
+                    Math.round(value)
+                )
+            )
 
         Quickshell.execDetached([
             "brightnessctl",
@@ -64,6 +80,8 @@ QtObject {
         if (percentage < 0)
             return
 
-        setPercentage(percentage + delta)
+        setPercentage(
+            percentage + delta
+        )
     }
 }

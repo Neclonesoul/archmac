@@ -7,6 +7,8 @@ import Quickshell
 
 import "services"
 import "plugins/bar"
+import "osd"
+import "notifications"
 
 ShellRoot {
     id: root
@@ -55,9 +57,101 @@ ShellRoot {
         id: bluetoothService
     }
 
+    OsdService {
+        id: osdService
+    }
+
+    NotificationService {
+        id: notificationService
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
+    }
+
+    Connections {
+        target: audioService
+
+        function onVolumeChanged() {
+            if (!audioService.available)
+                return
+
+            osdService.showVolume(
+                audioService.volume,
+                audioService.muted
+            )
+        }
+
+        function onMutedChanged() {
+            if (!audioService.available)
+                return
+
+            osdService.showVolume(
+                audioService.volume,
+                audioService.muted
+            )
+        }
+    }
+
+    Connections {
+        target: brightnessService
+
+        function onPercentageChanged() {
+            osdService.showBrightness(
+                brightnessService.percentage
+            )
+        }
+    }
+
+    Connections {
+        target: modeService
+
+        function onModeActivated(
+            mode,
+            description
+        ) {
+            osdService.showMode(
+                mode,
+                description
+            )
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        NotificationToast {
+            required property var modelData
+
+            shellScreen: modelData
+            theme: themeService
+            notifications: notificationService
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        NotificationCentre {
+            required property var modelData
+
+            shellScreen: modelData
+            theme: themeService
+            notifications: notificationService
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        SystemOsd {
+            required property var modelData
+
+            shellScreen: modelData
+            theme: themeService
+            osd: osdService
+        }
     }
 
     Variants {
@@ -79,6 +173,7 @@ ShellRoot {
             media: mediaService
             network: networkService
             bluetooth: bluetoothService
+            notifications: notificationService
             clock: clockService
         }
     }

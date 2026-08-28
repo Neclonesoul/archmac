@@ -23,6 +23,7 @@ PanelWindow {
     required property var media
     required property var network
     required property var bluetooth
+    required property var notifications
     required property var clock
 
     property bool controlCentreOpen: false
@@ -295,6 +296,60 @@ PanelWindow {
                 width: 1
                 height: 14
                 color: "#24FFFFFF"
+            }
+
+            Rectangle {
+                id: notificationCapsule
+
+                implicitWidth:
+                    notificationLabel.implicitWidth + 16
+
+                implicitHeight: 22
+
+                radius: theme.radiusSmall
+
+                color:
+                    notificationTap.pressed
+                        ? "#30FFFFFF"
+                        : notificationHover.hovered
+                            ? "#20FFFFFF"
+                            : notifications.centreOpen
+                                ? "#283EA6FF"
+                                : theme.surfaceRaised
+
+                Text {
+                    id: notificationLabel
+
+                    anchors.centerIn: parent
+
+                    text:
+                        notifications.count > 0
+                            ? "N " + notifications.count
+                            : "N"
+
+                    color:
+                        notifications.count > 0
+                            ? theme.textPrimary
+                            : theme.textMuted
+
+                    font.family: "0xProto"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                }
+
+                HoverHandler {
+                    id: notificationHover
+
+                    cursorShape:
+                        Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    id: notificationTap
+
+                    onTapped:
+                        notifications.toggleCentre()
+                }
             }
 
             Rectangle {

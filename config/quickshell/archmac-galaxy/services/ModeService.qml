@@ -1,4 +1,5 @@
 import QtQuick
+
 import Quickshell
 import Quickshell.Io
 
@@ -10,52 +11,121 @@ QtObject {
     readonly property string performance: "performance"
     readonly property string battery: "battery"
 
+    readonly property string statePath:
+        "/home/tyson/.local/state/archmac/mode"
+
+    readonly property string eventPath:
+        "/home/tyson/.local/state/archmac/mode-event"
+
     property string current: "balanced"
 
-    property Process statusReader: Process {
-        command: [
-            "/home/tyson/.local/bin/archmac-mode",
-            "status"
-        ]
+    signal modeActivated(
+        string mode,
+        string description
+    )
 
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const value = this.text.trim()
-
-                if (value === "fancy"
-                        || value === "balanced"
-                        || value === "performance"
-                        || value === "battery") {
-                    service.current = value
-                }
-            }
-        }
+    function validMode(mode) {
+        return mode === fancy
+            || mode === balanced
+            || mode === performance
+            || mode === battery
     }
 
-    property Timer refreshTimer: Timer {
-        interval: 1500
-        repeat: true
-        running: true
-        triggeredOnStart: true
+    function descriptionFor(mode) {
+        if (mode === fancy)
+            return "Full visual experience"
 
-        onTriggered: {
-            if (!service.statusReader.running)
-                service.statusReader.running = true
+        if (mode === balanced)
+            return "Everyday efficiency"
+
+        if (mode === performance)
+            return "Maximum responsiveness"
+
+        if (mode === battery)
+            return "Maximum endurance"
+
+        return ""
+    }
+
+    /*
+     * Persistent state establishes truth.
+     * It does NOT generate an OSD by itself.
+     */
+    function acceptState(value) {
+        const mode = value.trim()
+
+        if (!validMode(mode))
+            return
+
+        current = mode
+    }
+
+    /*
+     * Explicit event means a user actually changed mode.
+     * This is what triggers the transient Galaxy OSD.
+     */
+    property FileView eventFile: FileView {
+        path: service.eventPath
+        watchChanges: true
+
+        function processEvent() {
+            const fields =
+                text().trim().split(" ")
+
+            if (fields.length < 1)
+                return
+
+            const mode = fields[0]
+
+            if (!service.validMode(mode))
+                return
+
+            service.current = mode
+
+            service.modeActivated(
+                mode,
+                service.descriptionFor(mode)
+            )
         }
+
+        onFileChanged:
+            reload()
+
+        onTextChanged:
+            processEvent()
+    }
+
+    property FileView stateFile: FileView {
+        path: service.statePath
+        watchChanges: true
+
+        onLoaded:
+            service.acceptState(
+                text()
+            )
+
+        onFileChanged:
+            reload()
+
+        onTextChanged:
+            service.acceptState(
+                text()
+            )
     }
 
     function apply(mode) {
-        if (mode !== fancy
-                && mode !== balanced
-                && mode !== performance
-                && mode !== battery)
+        if (!validMode(mode))
             return
 
-        /*
-         * Update presentation immediately.
-         * The persistent state will confirm on the next refresh.
-         */
         current = mode
+
+        /*
+         * Galaxy-originated changes respond immediately.
+         */
+        modeActivated(
+            mode,
+            descriptionFor(mode)
+        )
 
         Quickshell.execDetached([
             "/home/tyson/.local/bin/archmac-mode",
@@ -82,19 +152,6 @@ QtObject {
         apply(fancy)
     }
 
-    readonly property string description: {
-        if (current === fancy)
-            return "Full visual experience"
-
-        if (current === balanced)
-            return "Everyday efficiency"
-
-        if (current === performance)
-            return "Maximum responsiveness"
-
-        if (current === battery)
-            return "Maximum endurance"
-
-        return ""
-    }
+    readonly property string description:
+        descriptionFor(current)
 }
