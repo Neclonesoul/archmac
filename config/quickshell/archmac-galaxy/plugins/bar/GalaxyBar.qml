@@ -298,14 +298,18 @@ PanelWindow {
             }
 
             Rectangle {
-                implicitWidth: modeLabel.implicitWidth + 16
+                id: modeCapsule
+
+                implicitWidth: modeLabel.implicitWidth + 18
                 implicitHeight: 22
 
                 radius: theme.radiusSmall
 
-                color: modeMouse.containsMouse
-                    ? "#20FFFFFF"
-                    : theme.surfaceRaised
+                color: modeTap.pressed
+                    ? "#30FFFFFF"
+                    : modeHover.hovered
+                        ? "#20FFFFFF"
+                        : theme.surfaceRaised
 
                 Text {
                     id: modeLabel
@@ -315,9 +319,9 @@ PanelWindow {
                     text: mode.current.toUpperCase()
 
                     color:
-                        mode.current === mode.battery
+                        mode.current === "battery"
                             ? "#FFD166"
-                            : mode.current === mode.performance
+                            : mode.current === "performance"
                                 ? theme.accent
                                 : theme.textSecondary
 
@@ -326,16 +330,24 @@ PanelWindow {
                     font.weight: Font.DemiBold
                 }
 
-                MouseArea {
-                    id: modeMouse
+                HoverHandler {
+                    id: modeHover
 
-                    anchors.fill: parent
-                    hoverEnabled: true
+                    cursorShape:
+                        Qt.PointingHandCursor
+                }
 
-                    cursorShape: Qt.PointingHandCursor
+                TapHandler {
+                    id: modeTap
 
-                    onClicked:
+                    onTapped: {
+                        console.log(
+                            "ARCHMAC mode click:",
+                            mode.current
+                        )
+
                         mode.next()
+                    }
                 }
             }
 

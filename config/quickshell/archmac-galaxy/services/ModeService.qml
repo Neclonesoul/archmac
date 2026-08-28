@@ -1,5 +1,4 @@
 import QtQuick
-
 import Quickshell
 import Quickshell.Io
 
@@ -11,15 +10,7 @@ QtObject {
     readonly property string performance: "performance"
     readonly property string battery: "battery"
 
-    property string current: balanced
-    property bool applying: false
-
-    /*
-     * Mode state is owned by the archmac-mode command.
-     *
-     * QML is presentation/control.
-     * The command is the stable system boundary.
-     */
+    property string current: "balanced"
 
     property Process statusReader: Process {
         command: [
@@ -31,10 +22,10 @@ QtObject {
             onStreamFinished: {
                 const value = this.text.trim()
 
-                if (value === service.fancy
-                        || value === service.balanced
-                        || value === service.performance
-                        || value === service.battery) {
+                if (value === "fancy"
+                        || value === "balanced"
+                        || value === "performance"
+                        || value === "battery") {
                     service.current = value
                 }
             }
@@ -42,7 +33,7 @@ QtObject {
     }
 
     property Timer refreshTimer: Timer {
-        interval: 2000
+        interval: 1500
         repeat: true
         running: true
         triggeredOnStart: true
@@ -54,90 +45,56 @@ QtObject {
     }
 
     function apply(mode) {
-        if (applying)
-            return
-
         if (mode !== fancy
                 && mode !== balanced
                 && mode !== performance
                 && mode !== battery)
             return
 
-        applying = true
+        /*
+         * Update presentation immediately.
+         * The persistent state will confirm on the next refresh.
+         */
         current = mode
 
         Quickshell.execDetached([
             "/home/tyson/.local/bin/archmac-mode",
             mode
         ])
-
-        settleTimer.restart()
     }
 
     function next() {
-        switch (current) {
-        case fancy:
+        if (current === fancy) {
             apply(balanced)
-            break
+            return
+        }
 
-        case balanced:
+        if (current === balanced) {
             apply(performance)
-            break
+            return
+        }
 
-        case performance:
+        if (current === performance) {
             apply(battery)
-            break
-
-        default:
-            apply(fancy)
-            break
+            return
         }
-    }
 
-    property Timer settleTimer: Timer {
-        interval: 700
-        repeat: false
-
-        onTriggered: {
-            service.applying = false
-
-            if (!service.statusReader.running)
-                service.statusReader.running = true
-        }
-    }
-
-    readonly property real motionScale: {
-        switch (current) {
-        case performance:
-            return 0.60
-
-        case battery:
-            return 0.45
-
-        case balanced:
-            return 0.80
-
-        default:
-            return 1.0
-        }
+        apply(fancy)
     }
 
     readonly property string description: {
-        switch (current) {
-        case fancy:
+        if (current === fancy)
             return "Full visual experience"
 
-        case balanced:
+        if (current === balanced)
             return "Everyday efficiency"
 
-        case performance:
+        if (current === performance)
             return "Maximum responsiveness"
 
-        case battery:
+        if (current === battery)
             return "Maximum endurance"
 
-        default:
-            return ""
-        }
+        return ""
     }
 }
