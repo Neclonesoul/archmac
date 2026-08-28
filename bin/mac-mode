@@ -12,3 +12,20 @@ case "$STATE" in
         exec "$HOME/.local/bin/mac-fancy"
         ;;
 esac
+
+# ARCHMAC GALAXY MODE SYNC
+# mac-mode historically toggles Fancy <-> Performance.
+# Persist whichever side it ended on so Quickshell reflects it.
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
+mkdir -p "$STATE_DIR"
+
+if command -v powerprofilesctl >/dev/null 2>&1; then
+    case "$(powerprofilesctl get 2>/dev/null || true)" in
+        performance)
+            printf '%s\n' performance > "$STATE_DIR/mode"
+            ;;
+        *)
+            printf '%s\n' fancy > "$STATE_DIR/mode"
+            ;;
+    esac
+fi

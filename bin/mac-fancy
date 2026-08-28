@@ -39,3 +39,7 @@ powerprofilesctl set balanced
 notify-send \
   "ARCHMAC · FANCY" \
   "Blur · shadows · transparency · animations enabled"
+
+# Keep Galaxy ModeService synchronized with legacy keybind execution.
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
+printf '%s\n' "fancy" > "${XDG_STATE_HOME:-$HOME/.local/state}/archmac/mode"

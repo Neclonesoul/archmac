@@ -36,3 +36,7 @@ printf '%s\n' performance > "${XDG_RUNTIME_DIR:-/tmp}/archmac-mode"
 notify-send \
   "ARCHMAC · PERFORMANCE" \
   "Low compositor overhead · normal CPU power"
+
+# Keep Galaxy ModeService synchronized with legacy keybind execution.
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/archmac"
+printf '%s\n' "performance" > "${XDG_STATE_HOME:-$HOME/.local/state}/archmac/mode"
