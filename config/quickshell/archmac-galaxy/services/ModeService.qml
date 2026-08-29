@@ -12,10 +12,10 @@ QtObject {
     readonly property string battery: "battery"
 
     readonly property string statePath:
-        "/home/tyson/.local/state/archmac/mode"
+        Quickshell.env("HOME") + "/.local/state/archmac/mode"
 
     readonly property string eventPath:
-        "/home/tyson/.local/state/archmac/mode-event"
+        Quickshell.env("HOME") + "/.local/state/archmac/mode-event"
 
     property string current: "balanced"
 
@@ -128,7 +128,7 @@ QtObject {
         )
 
         Quickshell.execDetached([
-            "/home/tyson/.local/bin/archmac-mode",
+            Quickshell.env("HOME") + "/.local/bin/archmac-mode",
             mode
         ])
     }

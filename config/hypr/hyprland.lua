@@ -30,6 +30,7 @@ hl.monitor({
 -- Set programs that you use
 local terminal    = "kitty"
 local fileManager = "thunar"
+local home = os.getenv("HOME")
 local menu = "qs -c archmac-galaxy ipc call launcher toggle"
 
 
@@ -355,17 +356,17 @@ hl.bind("XF86KbdBrightnessDown",
     { locked = true, repeating = true })
 
 -- ARCHMAC Fancy / Performance toggle
-hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-mode"))
+hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd(home .. "/.local/bin/mac-mode"))
 
 -- Lock
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 
 -- Screenshots
 hl.bind(mainMod .. " + SHIFT + 3",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-screenshot full"))
+    hl.dsp.exec_cmd(home .. "/.local/bin/mac-screenshot full"))
 
 hl.bind(mainMod .. " + SHIFT + 4",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-screenshot area"))
+    hl.dsp.exec_cmd(home .. "/.local/bin/mac-screenshot area"))
 
 -- Clipboard history
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | wofi --dmenu | cliphist decode | wl-copy"))
@@ -450,7 +451,7 @@ hl.exec_cmd("hyprpaper")
  hl.exec_cmd("blueman-applet")
     hl.exec_cmd("mako")
  hl.exec_cmd("hypridle")
-hl.exec_cmd("/home/tyson/.local/bin/archmac-cliphist")
+hl.exec_cmd(home .. "/.local/bin/archmac-cliphist")
 end)
 
 ----------------------
@@ -463,7 +464,7 @@ end)
 -- scrolling <-> dwindle
 hl.bind(
     mainMod .. " + G",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/archmac-layout-toggle")
+    hl.dsp.exec_cmd(home .. "/.local/bin/archmac-layout-toggle")
 )
 
 
@@ -471,15 +472,15 @@ hl.bind(
 
 -- Fancy <-> Performance
 hl.bind("SUPER + F12",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-mode"))
+    hl.dsp.exec_cmd(home .. "/.local/bin/mac-mode"))
 
 -- Explicit battery mode
 hl.bind("SUPER + SHIFT + F12",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-battery"))
+    hl.dsp.exec_cmd(home .. "/.local/bin/mac-battery"))
 
 -- Explicit Fancy restore
 hl.bind("SUPER + CTRL + F12",
-    hl.dsp.exec_cmd("/home/tyson/.local/bin/mac-fancy"))
+    hl.dsp.exec_cmd(home .. "/.local/bin/mac-fancy"))
 
 --------------------------
 -- ARCHMAC LAYER POLISH
