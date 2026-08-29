@@ -4,6 +4,8 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 
+import "../components"
+
 PanelWindow {
     id: window
 
@@ -420,18 +422,12 @@ PanelWindow {
 
                         spacing: 10
 
-                        Text {
-                            text: "C"
+                        ArchIcon {
+                            name: "content_paste"
+                            size: 17
 
                             color:
                                 theme.textMuted
-
-                            font.family:
-                                "0xProto"
-
-                            font.pixelSize: 8
-                            font.weight:
-                                Font.DemiBold
                         }
 
                         Text {
@@ -452,17 +448,16 @@ PanelWindow {
                                 Text.ElideRight
                         }
 
-                        Text {
+                        ArchIcon {
                             visible:
                                 index
                                 === launcher.selectedIndex
 
-                            text: "↵"
+                            name: "keyboard_return"
+                            size: 16
 
                             color:
                                 theme.textMuted
-
-                            font.pixelSize: 12
                         }
                     }
 
@@ -634,17 +629,16 @@ PanelWindow {
                             }
                         }
 
-                        Text {
+                        ArchIcon {
                             visible:
                                 index
                                 === launcher.selectedIndex
 
-                            text: "↵"
+                            name: "keyboard_return"
+                            size: 16
 
                             color:
                                 theme.textMuted
-
-                            font.pixelSize: 12
                         }
                     }
 

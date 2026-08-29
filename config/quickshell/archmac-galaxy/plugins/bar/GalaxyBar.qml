@@ -7,6 +7,7 @@ import "../workspaces"
 import "../tray"
 import "../../panels/controlcentre"
 import "../../panels/network"
+import "../../components"
 
 PanelWindow {
     id: bar
@@ -156,20 +157,47 @@ PanelWindow {
                     ? "#20FFFFFF"
                     : theme.surfaceRaised
 
-                Text {
-                    id: audioText
-
+                Row {
                     anchors.centerIn: parent
+                    spacing: 5
 
-                    text: audio.shortLabel
+                    ArchIcon {
+                        name:
+                            !audio.available
+                                ? "volume_off"
+                                : audio.muted
+                                    ? "volume_off"
+                                    : audio.volume >= 70
+                                        ? "volume_up"
+                                        : audio.volume >= 30
+                                            ? "volume_down"
+                                            : "volume_mute"
 
-                    color: audio.muted
-                        ? theme.textMuted
-                        : theme.textSecondary
+                        size: 15
 
-                    font.family: "0xProto"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
+                        color:
+                            audio.muted
+                                ? theme.textMuted
+                                : theme.textSecondary
+                    }
+
+                    Text {
+                        id: audioText
+
+                        text:
+                            audio.available
+                                ? audio.volume + "%"
+                                : "--"
+
+                        color:
+                            audio.muted
+                                ? theme.textMuted
+                                : theme.textSecondary
+
+                        font.family: "0xProto"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                    }
                 }
 
                 MouseArea {
@@ -208,29 +236,67 @@ PanelWindow {
 
                 color: theme.surfaceRaised
 
-                Text {
-                    id: batteryText
-
+                Row {
                     anchors.centerIn: parent
+                    spacing: 5
 
-                    text: power.shortLabel
+                    ArchIcon {
+                        name:
+                            power.charging
+                                ? "battery_charging_full"
+                                : power.percentage < 0
+                                    ? "battery_unknown"
+                                    : power.percentage <= 15
+                                        ? "battery_1_bar"
+                                        : power.percentage <= 30
+                                            ? "battery_2_bar"
+                                            : power.percentage <= 55
+                                                ? "battery_4_bar"
+                                                : power.percentage <= 80
+                                                    ? "battery_5_bar"
+                                                    : "battery_full"
 
-                    color: {
-                        if (power.percentage < 0)
-                            return theme.textMuted
+                        size: 15
 
-                        if (power.percentage <= 15)
-                            return "#FF6B6B"
+                        color: {
+                            if (power.percentage < 0)
+                                return theme.textMuted
 
-                        if (power.percentage <= 30)
-                            return "#FFD166"
+                            if (power.percentage <= 15)
+                                return "#FF6B6B"
 
-                        return theme.textSecondary
+                            if (power.percentage <= 30)
+                                return "#FFD166"
+
+                            return theme.textSecondary
+                        }
                     }
 
-                    font.family: "0xProto"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
+                    Text {
+                        id: batteryText
+
+                        text:
+                            power.percentage >= 0
+                                ? power.percentage + "%"
+                                : "--"
+
+                        color: {
+                            if (power.percentage < 0)
+                                return theme.textMuted
+
+                            if (power.percentage <= 15)
+                                return "#FF6B6B"
+
+                            if (power.percentage <= 30)
+                                return "#FFD166"
+
+                            return theme.textSecondary
+                        }
+
+                        font.family: "0xProto"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                    }
                 }
             }
 
@@ -249,21 +315,49 @@ PanelWindow {
                         ? "#20FFFFFF"
                         : theme.surfaceRaised
 
-                Text {
-                    id: networkText
-
+                Row {
                     anchors.centerIn: parent
+                    spacing: 5
 
-                    text: network.shortLabel
+                    ArchIcon {
+                        name:
+                            network.connectionType === "offline"
+                                ? "wifi_off"
+                                : network.connectionType === "ethernet"
+                                    ? "lan"
+                                    : network.signalPercent >= 70
+                                        ? "signal_wifi_4_bar"
+                                        : network.signalPercent >= 35
+                                            ? "network_wifi_2_bar"
+                                            : "network_wifi_1_bar"
 
-                    color:
-                        network.connectionType === "offline"
-                            ? "#FFD166"
-                            : theme.textSecondary
+                        size: 15
 
-                    font.family: "0xProto"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
+                        color:
+                            network.connectionType === "offline"
+                                ? "#FFD166"
+                                : theme.textSecondary
+                    }
+
+                    Text {
+                        id: networkText
+
+                        text:
+                            network.connectionType === "offline"
+                                ? "OFF"
+                                : network.wifiConnected
+                                    ? network.signalPercent + "%"
+                                    : network.shortLabel
+
+                        color:
+                            network.connectionType === "offline"
+                                ? "#FFD166"
+                                : theme.textSecondary
+
+                        font.family: "0xProto"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                    }
                 }
 
                 MouseArea {
@@ -317,24 +411,40 @@ PanelWindow {
                                 ? "#283EA6FF"
                                 : theme.surfaceRaised
 
-                Text {
-                    id: notificationLabel
-
+                Row {
                     anchors.centerIn: parent
+                    spacing: 5
 
-                    text:
-                        notifications.count > 0
-                            ? "N " + notifications.count
-                            : "N"
+                    ArchIcon {
+                        name:
+                            notifications.count > 0
+                                ? "notifications"
+                                : "notifications_none"
 
-                    color:
-                        notifications.count > 0
-                            ? theme.textPrimary
-                            : theme.textMuted
+                        size: 15
 
-                    font.family: "0xProto"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
+                        color:
+                            notifications.count > 0
+                                ? theme.textPrimary
+                                : theme.textMuted
+                    }
+
+                    Text {
+                        id: notificationLabel
+
+                        visible:
+                            notifications.count > 0
+
+                        text:
+                            notifications.count
+
+                        color:
+                            theme.textPrimary
+
+                        font.family: "0xProto"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                    }
                 }
 
                 HoverHandler {

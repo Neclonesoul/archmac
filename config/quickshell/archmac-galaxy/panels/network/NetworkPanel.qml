@@ -4,6 +4,8 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Networking
 
+import "../../components"
+
 PanelWindow {
     id: panel
 
@@ -173,14 +175,14 @@ PanelWindow {
                     Layout.fillWidth: true
                 }
 
-                Text {
-                    text: "×"
+                ArchIcon {
+                    name: "close"
+                    size: 18
 
-                    color: closeMouse.containsMouse
-                        ? theme.textPrimary
-                        : theme.textMuted
-
-                    font.pixelSize: 20
+                    color:
+                        closeMouse.containsMouse
+                            ? theme.textPrimary
+                            : theme.textMuted
 
                     MouseArea {
                         id: closeMouse
@@ -221,14 +223,27 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 2
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "WI-FI"
+                            spacing: 4
 
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            ArchIcon {
+                                name:
+                                    network.wifiEnabled
+                                        ? "wifi"
+                                        : "wifi_off"
+
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "WI-FI"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -269,14 +284,23 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 2
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "SIGNAL"
+                            spacing: 4
 
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            ArchIcon {
+                                name: "signal_cellular_alt"
+                                size: 13
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "SIGNAL"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -307,14 +331,27 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 2
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "STATE"
+                            spacing: 4
 
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            ArchIcon {
+                                name:
+                                    network.wifiConnected
+                                        ? "link"
+                                        : "link_off"
+
+                                size: 13
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "STATE"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {

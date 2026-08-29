@@ -3,6 +3,8 @@ import QtQuick.Layouts
 
 import Quickshell
 
+import "../../components"
+
 PanelWindow {
     id: panel
 
@@ -88,14 +90,14 @@ PanelWindow {
                     Layout.fillWidth: true
                 }
 
-                Text {
-                    text: "×"
+                ArchIcon {
+                    name: "close"
+                    size: 18
 
-                    color: closeMouse.containsMouse
-                        ? theme.textPrimary
-                        : theme.textMuted
-
-                    font.pixelSize: 20
+                    color:
+                        closeMouse.containsMouse
+                            ? theme.textPrimary
+                            : theme.textMuted
 
                     MouseArea {
                         id: closeMouse
@@ -371,14 +373,27 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "WI-FI"
+                            spacing: 4
 
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            ArchIcon {
+                                name:
+                                    network.wifiEnabled
+                                        ? "wifi"
+                                        : "wifi_off"
+
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "WI-FI"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -446,14 +461,27 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "BLUETOOTH"
+                            spacing: 4
 
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            ArchIcon {
+                                name:
+                                    bluetooth.enabled
+                                        ? "bluetooth"
+                                        : "bluetooth_disabled"
+
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "BLUETOOTH"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -520,13 +548,23 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "CPU"
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            spacing: 4
+
+                            ArchIcon {
+                                name: "memory"
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "CPU"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -556,13 +594,23 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "MEMORY"
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            spacing: 4
+
+                            ArchIcon {
+                                name: "developer_board"
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "MEMORY"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -592,13 +640,32 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "TEMP"
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            spacing: 4
+
+                            ArchIcon {
+                                name: "thermostat"
+                                size: 14
+
+                                color:
+                                    telemetry.temperatureC >= 85
+                                        ? "#FF6B6B"
+                                        : theme.textMuted
+                            }
+
+                            Text {
+                                text: "TEMP"
+
+                                color:
+                                    telemetry.temperatureC >= 85
+                                        ? "#FF6B6B"
+                                        : theme.textMuted
+
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -632,13 +699,27 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 3
 
-                        Text {
+                        Row {
                             anchors.horizontalCenter:
                                 parent.horizontalCenter
 
-                            text: "BATTERY"
-                            color: theme.textMuted
-                            font.pixelSize: 8
+                            spacing: 4
+
+                            ArchIcon {
+                                name:
+                                    power.charging
+                                        ? "battery_charging_full"
+                                        : "battery_full"
+
+                                size: 14
+                                color: theme.textMuted
+                            }
+
+                            Text {
+                                text: "BATTERY"
+                                color: theme.textMuted
+                                font.pixelSize: 8
+                            }
                         }
 
                         Text {
@@ -700,10 +781,10 @@ PanelWindow {
                         }
                     }
 
-                    Text {
-                        text: "‹"
+                    ArchIcon {
+                        name: "skip_previous"
+                        size: 21
                         color: theme.textSecondary
-                        font.pixelSize: 22
 
                         MouseArea {
                             anchors.fill: parent
@@ -713,14 +794,14 @@ PanelWindow {
                         }
                     }
 
-                    Text {
-                        text:
+                    ArchIcon {
+                        name:
                             media.playing
-                                ? "Ⅱ"
-                                : "▶"
+                                ? "pause"
+                                : "play_arrow"
 
+                        size: 21
                         color: theme.textPrimary
-                        font.pixelSize: 16
 
                         MouseArea {
                             anchors.fill: parent
@@ -730,10 +811,10 @@ PanelWindow {
                         }
                     }
 
-                    Text {
-                        text: "›"
+                    ArchIcon {
+                        name: "skip_next"
+                        size: 21
                         color: theme.textSecondary
-                        font.pixelSize: 22
 
                         MouseArea {
                             anchors.fill: parent

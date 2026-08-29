@@ -3,6 +3,8 @@ import QtQuick.Layouts
 
 import Quickshell
 
+import "../components"
+
 PanelWindow {
     id: window
 
@@ -94,13 +96,13 @@ PanelWindow {
                                 ? "#20FFFFFF"
                                 : "transparent"
 
-                    Text {
+                    ArchIcon {
                         anchors.centerIn: parent
 
-                        text: "×"
+                        name: "close"
+                        size: 16
 
                         color: theme.textSecondary
-                        font.pixelSize: 15
                     }
 
                     HoverHandler {
@@ -209,11 +211,11 @@ PanelWindow {
                                     Text.ElideRight
                             }
 
-                            Text {
-                                text: "×"
+                            ArchIcon {
+                                name: "close"
+                                size: 14
 
                                 color: theme.textMuted
-                                font.pixelSize: 12
 
                                 TapHandler {
                                     onTapped:

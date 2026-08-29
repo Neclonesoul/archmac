@@ -3,6 +3,8 @@ import QtQuick.Layouts
 
 import Quickshell
 
+import "../components"
+
 PanelWindow {
     id: window
 
@@ -81,37 +83,32 @@ PanelWindow {
 
                 color: "#203EA6FF"
 
-                Text {
+                ArchIcon {
                     anchors.centerIn:
                         parent
 
-                    text: {
+                    name: {
                         switch (
                             osd.kind
                         ) {
                         case "mute":
-                            return "M"
+                            return "volume_off"
 
                         case "brightness":
-                            return "B"
+                            return "brightness_6"
 
                         case "mode":
-                            return "◆"
+                            return "tune"
 
                         default:
-                            return "V"
+                            return "volume_up"
                         }
                     }
 
+                    size: 20
+
                     color:
                         theme.textPrimary
-
-                    font.family:
-                        "0xProto"
-
-                    font.pixelSize: 13
-                    font.weight:
-                        Font.DemiBold
                 }
             }
 

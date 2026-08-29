@@ -3,6 +3,8 @@ import QtQuick.Layouts
 
 import Quickshell
 
+import "../components"
+
 PanelWindow {
     id: window
 
@@ -232,13 +234,12 @@ PanelWindow {
                                 Text.ElideRight
                         }
 
-                        Text {
-                            text: "×"
+                        ArchIcon {
+                            name: "close"
+                            size: 15
 
                             color:
                                 theme.textMuted
-
-                            font.pixelSize: 13
 
                             TapHandler {
                                 onTapped: {
