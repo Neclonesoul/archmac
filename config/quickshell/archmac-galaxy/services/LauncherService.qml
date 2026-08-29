@@ -10,10 +10,18 @@ QtObject {
     property string query: ""
     property int selectedIndex: 0
 
+    property bool calculatorActive: false
+    property bool calculatorPending: false
+    property string calculatorExpression: ""
+    property string calculatorResult: ""
+
     readonly property var applications:
         DesktopEntries.applications
 
     readonly property var filteredApplications: {
+        if (calculatorActive)
+            return []
+
         const source =
             applications.values
 
@@ -91,9 +99,93 @@ QtObject {
     readonly property int resultCount:
         filteredApplications.length
 
+    function looksLikeMath(text) {
+        const value = text.trim()
+
+        if (value.length < 2)
+            return false
+
+        /*
+         * Require at least one digit and either:
+         * - a mathematical operator, or
+         * - a common function / constant.
+         *
+         * This avoids stealing ordinary app searches.
+         */
+        const hasDigit =
+            /[0-9]/.test(value)
+
+        const hasOperator =
+            /[+\-*\/^()%]/.test(value)
+
+        const hasFunction =
+            /\b(sin|cos|tan|sqrt|log|ln|pi|abs|exp)\b/i
+                .test(value)
+
+        return (
+            (hasDigit && hasOperator)
+            || hasFunction
+        )
+    }
+
+    function evaluateCalculator() {
+        const expression =
+            query.trim()
+
+        calculatorActive =
+            looksLikeMath(expression)
+
+        calculatorExpression =
+            calculatorActive
+                ? expression
+                : ""
+
+        calculatorResult = ""
+        calculatorPending = false
+
+        if (!calculatorActive)
+            return
+
+        calculatorPending = true
+
+        calculatorProcess.command = [
+            "qalc",
+            "-t",
+            expression
+        ]
+
+        calculatorProcess.running = true
+    }
+
+    function copyCalculatorResult() {
+        const value =
+            calculatorResult.trim()
+
+        if (
+            !calculatorActive
+            || calculatorPending
+            || value === ""
+        ) {
+            return
+        }
+
+        clipboardProcess.command = [
+            "wl-copy",
+            value
+        ]
+
+        clipboardProcess.running = true
+
+        hide()
+    }
+
     function show() {
         query = ""
         selectedIndex = 0
+        calculatorActive = false
+        calculatorPending = false
+        calculatorExpression = ""
+        calculatorResult = ""
         open = true
     }
 
@@ -101,6 +193,10 @@ QtObject {
         open = false
         query = ""
         selectedIndex = 0
+        calculatorActive = false
+        calculatorPending = false
+        calculatorExpression = ""
+        calculatorResult = ""
     }
 
     function toggle() {
@@ -111,6 +207,9 @@ QtObject {
     }
 
     function moveSelection(delta) {
+        if (calculatorActive)
+            return
+
         if (resultCount <= 0) {
             selectedIndex = 0
             return
@@ -134,6 +233,11 @@ QtObject {
     }
 
     function launchSelected() {
+        if (calculatorActive) {
+            copyCalculatorResult()
+            return
+        }
+
         if (resultCount <= 0)
             return
 
@@ -146,16 +250,37 @@ QtObject {
 
     onQueryChanged: {
         selectedIndex = 0
+        calculatorDebounce.restart()
     }
 
-    /*
-     * Hyprland will eventually call:
-     *
-     * qs -c archmac-galaxy ipc call launcher toggle
-     *
-     * This keeps launcher ownership inside the existing
-     * long-lived Galaxy process.
-     */
+    property Timer calculatorDebounce: Timer {
+        interval: 120
+        repeat: false
+
+        onTriggered:
+            service.evaluateCalculator()
+    }
+
+    property Process calculatorProcess: Process {
+        id: calculatorProcess
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (!service.calculatorActive)
+                    return
+
+                service.calculatorResult =
+                    text.trim()
+
+                service.calculatorPending = false
+            }
+        }
+    }
+
+    property Process clipboardProcess: Process {
+        id: clipboardProcess
+    }
+
     property IpcHandler ipc: IpcHandler {
         target: "launcher"
 

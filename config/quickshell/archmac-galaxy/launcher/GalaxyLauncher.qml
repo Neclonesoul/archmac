@@ -239,9 +239,11 @@ PanelWindow {
                     Layout.fillWidth: true
 
                     text:
-                        launcher.query === ""
-                            ? "APPLICATIONS"
-                            : "RESULTS"
+                        launcher.calculatorActive
+                            ? "CALCULATOR"
+                            : launcher.query === ""
+                                ? "APPLICATIONS"
+                                : "RESULTS"
 
                     color:
                         theme.textMuted
@@ -256,13 +258,19 @@ PanelWindow {
 
                 Text {
                     text:
-                        launcher.resultCount
-                        + (
-                            launcher.resultCount
-                            === 1
-                                ? " RESULT"
-                                : " RESULTS"
-                        )
+                        launcher.calculatorActive
+                            ? (
+                                launcher.calculatorPending
+                                    ? "CALCULATING"
+                                    : "ENTER TO COPY"
+                            )
+                            : launcher.resultCount
+                                + (
+                                    launcher.resultCount
+                                    === 1
+                                        ? " RESULT"
+                                        : " RESULTS"
+                                )
 
                     color:
                         theme.textMuted
@@ -271,6 +279,89 @@ PanelWindow {
                         "0xProto"
 
                     font.pixelSize: 8
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight:
+                    launcher.calculatorActive
+                        ? 92
+                        : 0
+
+                visible:
+                    launcher.calculatorActive
+
+                radius: 10
+
+                color:
+                    "#161FFFFFF"
+
+                border.width: 1
+                border.color:
+                    "#30485A66"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 14
+
+                    spacing: 6
+
+                    Text {
+                        Layout.fillWidth: true
+
+                        text:
+                            launcher.calculatorExpression
+
+                        color:
+                            theme.textMuted
+
+                        font.family:
+                            "0xProto"
+
+                        font.pixelSize: 10
+
+                        elide:
+                            Text.ElideRight
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+
+                        text:
+                            launcher.calculatorPending
+                                ? "…"
+                                : (
+                                    launcher.calculatorResult
+                                    === ""
+                                        ? "No result"
+                                        : "= "
+                                            + launcher.calculatorResult
+                                )
+
+                        color:
+                            theme.textPrimary
+
+                        font.family:
+                            "0xProto"
+
+                        font.pixelSize: 18
+                        font.weight:
+                            Font.DemiBold
+
+                        elide:
+                            Text.ElideRight
+                    }
+                }
+
+                TapHandler {
+                    enabled:
+                        launcher.calculatorActive
+                        && !launcher.calculatorPending
+                        && launcher.calculatorResult !== ""
+
+                    onTapped:
+                        launcher.copyCalculatorResult()
                 }
             }
 
@@ -283,6 +374,9 @@ PanelWindow {
                 clip: true
 
                 spacing: 4
+
+                visible:
+                    !launcher.calculatorActive
 
                 model:
                     launcher.filteredApplications
@@ -432,7 +526,8 @@ PanelWindow {
 
                 Text {
                     visible:
-                        launcher.resultCount
+                        !launcher.calculatorActive
+                        && launcher.resultCount
                         === 0
 
                     anchors.centerIn:
@@ -457,7 +552,9 @@ PanelWindow {
                     Layout.fillWidth: true
 
                     text:
-                        "↑ ↓ navigate    ↵ open"
+                        launcher.calculatorActive
+                            ? "↵ copy result    esc close"
+                            : "↑ ↓ navigate    ↵ open"
 
                     color:
                         theme.textMuted

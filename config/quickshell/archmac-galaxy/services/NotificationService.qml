@@ -12,8 +12,11 @@ QtObject {
     readonly property var notifications:
         server.trackedNotifications
 
+    readonly property var notificationValues:
+        server.trackedNotifications.values
+
     readonly property int count:
-        notifications.values.length
+        notificationValues.length
 
     signal received(var notification)
 
