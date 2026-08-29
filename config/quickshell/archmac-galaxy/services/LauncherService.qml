@@ -15,6 +15,10 @@ QtObject {
     property string calculatorExpression: ""
     property string calculatorResult: ""
 
+    property bool clipboardActive: false
+    property bool clipboardLoading: false
+    property var clipboardEntries: []
+
     readonly property var applications:
         DesktopEntries.applications
 
@@ -96,8 +100,107 @@ QtObject {
         )
     }
 
+    readonly property var filteredClipboardEntries: {
+        if (!clipboardActive)
+            return []
+
+        const needle =
+            clipboardSearchQuery()
+                .trim()
+                .toLowerCase()
+
+        if (needle === "")
+            return clipboardEntries
+
+        const filtered = []
+
+        for (const item of clipboardEntries) {
+            if (
+                item.preview
+                    .toLowerCase()
+                    .includes(needle)
+            ) {
+                filtered.push(item)
+            }
+        }
+
+        return filtered
+    }
+
     readonly property int resultCount:
-        filteredApplications.length
+        clipboardActive
+            ? filteredClipboardEntries.length
+            : filteredApplications.length
+
+    function looksLikeClipboard(text) {
+        const value =
+            text.replace(/^\\s+/, "").toLowerCase()
+
+        return (
+            value === "clip"
+            || value.startsWith("clip ")
+            || value === "clipboard"
+            || value.startsWith("clipboard ")
+        )
+    }
+
+    function clipboardSearchQuery() {
+        const value =
+            query.replace(/^\\s+/, "")
+
+        if (
+            value.toLowerCase()
+                .startsWith("clipboard")
+        ) {
+            return value
+                .slice(9)
+                .replace(/^\\s+/, "")
+        }
+
+        if (
+            value.toLowerCase()
+                .startsWith("clip")
+        ) {
+            return value
+                .slice(4)
+                .replace(/^\\s+/, "")
+        }
+
+        return ""
+    }
+
+    function refreshClipboard() {
+        clipboardLoading = true
+
+        clipboardListProcess.command = [
+            "cliphist",
+            "list"
+        ]
+
+        clipboardListProcess.running = true
+    }
+
+    function restoreClipboard(item) {
+        if (!item)
+            return
+
+        /*
+         * Pass the complete cliphist line as $1 rather than
+         * interpolating it into shell code. This keeps clipboard
+         * contents out of the command string.
+         */
+        clipboardDecodeProcess.command = [
+            "bash",
+            "-lc",
+            "printf '%s\\n' \"$1\" | cliphist decode | wl-copy",
+            "_",
+            item.raw
+        ]
+
+        clipboardDecodeProcess.running = true
+
+        hide()
+    }
 
     function looksLikeMath(text) {
         const value = text.trim()
@@ -132,8 +235,20 @@ QtObject {
         const expression =
             query.trim()
 
+        clipboardActive =
+            looksLikeClipboard(expression)
+
         calculatorActive =
-            looksLikeMath(expression)
+            !clipboardActive
+            && looksLikeMath(expression)
+
+        if (
+            clipboardActive
+            && clipboardEntries.length === 0
+            && !clipboardLoading
+        ) {
+            refreshClipboard()
+        }
 
         calculatorExpression =
             calculatorActive
@@ -186,6 +301,7 @@ QtObject {
         calculatorPending = false
         calculatorExpression = ""
         calculatorResult = ""
+        clipboardActive = false
         open = true
     }
 
@@ -197,6 +313,7 @@ QtObject {
         calculatorPending = false
         calculatorExpression = ""
         calculatorResult = ""
+        clipboardActive = false
     }
 
     function toggle() {
@@ -235,6 +352,19 @@ QtObject {
     function launchSelected() {
         if (calculatorActive) {
             copyCalculatorResult()
+            return
+        }
+
+        if (clipboardActive) {
+            if (resultCount <= 0)
+                return
+
+            restoreClipboard(
+                filteredClipboardEntries[
+                    selectedIndex
+                ]
+            )
+
             return
         }
 
@@ -279,6 +409,59 @@ QtObject {
 
     property Process clipboardProcess: Process {
         id: clipboardProcess
+    }
+
+    property Process clipboardListProcess: Process {
+        id: clipboardListProcess
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const parsed = []
+
+                for (
+                    const line of text.split("\n")
+                ) {
+                    if (line.trim() === "")
+                        continue
+
+                    const separator =
+                        line.indexOf("\t")
+
+                    if (separator <= 0)
+                        continue
+
+                    const id =
+                        line.slice(0, separator)
+
+                    /*
+                     * cliphist IDs are numeric. Ignore malformed
+                     * lines rather than ever feeding them back.
+                     */
+                    if (!/^[0-9]+$/.test(id))
+                        continue
+
+                    parsed.push({
+                        id: id,
+                        raw: line,
+                        preview:
+                            line
+                                .slice(separator + 1)
+                                .replace(/\s+/g, " ")
+                                .trim()
+                    })
+                }
+
+                service.clipboardEntries =
+                    parsed
+
+                service.clipboardLoading =
+                    false
+            }
+        }
+    }
+
+    property Process clipboardDecodeProcess: Process {
+        id: clipboardDecodeProcess
     }
 
     property IpcHandler ipc: IpcHandler {

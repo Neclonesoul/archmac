@@ -220,7 +220,7 @@ PanelWindow {
                     }
 
                     text:
-                        "Search applications…"
+                        "Search apps, calculate, or type clip…"
 
                     color:
                         theme.textMuted
@@ -241,9 +241,11 @@ PanelWindow {
                     text:
                         launcher.calculatorActive
                             ? "CALCULATOR"
-                            : launcher.query === ""
-                                ? "APPLICATIONS"
-                                : "RESULTS"
+                            : launcher.clipboardActive
+                                ? "CLIPBOARD"
+                                : launcher.query === ""
+                                    ? "APPLICATIONS"
+                                    : "RESULTS"
 
                     color:
                         theme.textMuted
@@ -264,7 +266,14 @@ PanelWindow {
                                     ? "CALCULATING"
                                     : "ENTER TO COPY"
                             )
-                            : launcher.resultCount
+                            : launcher.clipboardActive
+                                ? (
+                                    launcher.clipboardLoading
+                                        ? "LOADING"
+                                        : launcher.resultCount
+                                            + " ITEMS"
+                                )
+                                : launcher.resultCount
                                 + (
                                     launcher.resultCount
                                     === 1
@@ -295,7 +304,7 @@ PanelWindow {
                 radius: 10
 
                 color:
-                    "#161FFFFFF"
+                    "#E61A2228"
 
                 border.width: 1
                 border.color:
@@ -366,6 +375,138 @@ PanelWindow {
             }
 
             ListView {
+                id: clipboardResults
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible:
+                    launcher.clipboardActive
+
+                clip: true
+                spacing: 4
+
+                model:
+                    launcher.filteredClipboardEntries
+
+                currentIndex:
+                    launcher.selectedIndex
+
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+
+                    width:
+                        ListView.view.width
+
+                    height: 50
+
+                    radius: 9
+
+                    color:
+                        index
+                        === launcher.selectedIndex
+                            ? "#253F6072"
+                            : clipHover.hovered
+                                ? "#151FFFFFF"
+                                : "transparent"
+
+                    RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: 12
+                            rightMargin: 12
+                        }
+
+                        spacing: 10
+
+                        Text {
+                            text: "C"
+
+                            color:
+                                theme.textMuted
+
+                            font.family:
+                                "0xProto"
+
+                            font.pixelSize: 8
+                            font.weight:
+                                Font.DemiBold
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+
+                            text:
+                                modelData.preview
+
+                            color:
+                                theme.textPrimary
+
+                            font.family:
+                                "0xProto"
+
+                            font.pixelSize: 9
+
+                            elide:
+                                Text.ElideRight
+                        }
+
+                        Text {
+                            visible:
+                                index
+                                === launcher.selectedIndex
+
+                            text: "↵"
+
+                            color:
+                                theme.textMuted
+
+                            font.pixelSize: 12
+                        }
+                    }
+
+                    HoverHandler {
+                        id: clipHover
+
+                        onHoveredChanged: {
+                            if (hovered)
+                                launcher.selectedIndex =
+                                    index
+                        }
+                    }
+
+                    TapHandler {
+                        onTapped:
+                            launcher.restoreClipboard(
+                                modelData
+                            )
+                    }
+                }
+
+                Text {
+                    visible:
+                        launcher.clipboardActive
+                        && !launcher.clipboardLoading
+                        && launcher.resultCount === 0
+
+                    anchors.centerIn:
+                        parent
+
+                    text:
+                        "No matching clipboard entries"
+
+                    color:
+                        theme.textMuted
+
+                    font.family:
+                        "0xProto"
+
+                    font.pixelSize: 10
+                }
+            }
+
+            ListView {
                 id: results
 
                 Layout.fillWidth: true
@@ -377,6 +518,7 @@ PanelWindow {
 
                 visible:
                     !launcher.calculatorActive
+                    && !launcher.clipboardActive
 
                 model:
                     launcher.filteredApplications
@@ -527,6 +669,7 @@ PanelWindow {
                 Text {
                     visible:
                         !launcher.calculatorActive
+                        && !launcher.clipboardActive
                         && launcher.resultCount
                         === 0
 
@@ -554,7 +697,9 @@ PanelWindow {
                     text:
                         launcher.calculatorActive
                             ? "↵ copy result    esc close"
-                            : "↑ ↓ navigate    ↵ open"
+                            : launcher.clipboardActive
+                                ? "↑ ↓ navigate    ↵ restore clipboard"
+                                : "↑ ↓ navigate    ↵ open"
 
                     color:
                         theme.textMuted
