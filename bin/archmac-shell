@@ -9,6 +9,27 @@ galaxy_pids() {
     pgrep -f "qs -c ${CONFIG}" 2>/dev/null || true
 }
 
+wayland_ready() {
+    [[ -n "${WAYLAND_DISPLAY:-}" ]] || return 1
+    [[ -n "${XDG_RUNTIME_DIR:-}" ]] || return 1
+    [[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]] || return 1
+    hyprctl -j monitors 2>/dev/null | grep -q '"name"'
+}
+
+wait_for_wayland() {
+    local i
+
+    for i in {1..100}; do
+        if wayland_ready; then
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    echo "FAIL — Hyprland session did not become ready."
+    return 1
+}
+
 status() {
     local pids
     pids="$(galaxy_pids)"
@@ -23,23 +44,33 @@ status() {
 }
 
 start() {
+    local attempt
+
     if galaxy_pids | grep -q .; then
         echo "ARCHMAC Galaxy is already running."
         status
         return 0
     fi
 
-    nohup qs -c "$CONFIG" >"$LOG" 2>&1 &
-    sleep 1
+    wait_for_wayland || return 1
 
-    if galaxy_pids | grep -q .; then
-        echo "PASS — Galaxy started."
-        status
-    else
-        echo "FAIL — Galaxy failed to start."
-        echo "Log: $LOG"
-        return 1
-    fi
+    for attempt in 1 2 3; do
+        nohup qs -c "$CONFIG" >"$LOG" 2>&1 &
+        sleep 1
+
+        if galaxy_pids | grep -q .; then
+            echo "PASS — Galaxy started."
+            status
+            return 0
+        fi
+
+        echo "Galaxy startup attempt ${attempt} failed; retrying..." >>"$LOG"
+        sleep 1
+    done
+
+    echo "FAIL — Galaxy failed after 3 attempts."
+    echo "Log: $LOG"
+    return 1
 }
 
 stop() {
