@@ -361,6 +361,7 @@ hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd(home .. "/.local/bin/mac-mode"))
 
 -- Lock
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd("qs -c archmac-galaxy ipc call session toggle"))
 
 -- Screenshots
 hl.bind(mainMod .. " + SHIFT + 3",

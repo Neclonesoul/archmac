@@ -14,6 +14,7 @@ import "notifications"
 import "launcher"
 
 import "overview"
+import "power"
 ShellRoot {
     id: root
 
@@ -84,6 +85,13 @@ ShellRoot {
 
     }
 
+
+    SessionService {
+
+        id: sessionService
+
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -136,6 +144,27 @@ ShellRoot {
             )
         }
     }
+
+    Variants {
+
+        model: Quickshell.screens
+
+
+        PowerMenu {
+
+            required property var modelData
+
+
+            shellScreen: modelData
+
+            theme: themeService
+
+            session: sessionService
+
+        }
+
+    }
+
 
     Variants {
 
