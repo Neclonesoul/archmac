@@ -15,6 +15,7 @@ import "launcher"
 
 import "overview"
 import "power"
+import "dashboard"
 ShellRoot {
     id: root
 
@@ -92,6 +93,13 @@ ShellRoot {
 
     }
 
+
+    DashboardService {
+
+        id: dashboardService
+
+    }
+
     SystemClock {
         id: clockService
         precision: SystemClock.Minutes
@@ -144,6 +152,45 @@ ShellRoot {
             )
         }
     }
+
+    Variants {
+
+        model: Quickshell.screens
+
+
+        GalaxyDashboard {
+
+            required property var modelData
+
+
+            shellScreen: modelData
+
+            theme: themeService
+
+            dashboard: dashboardService
+
+            mode: modeService
+
+            workspaces: workspaceService
+
+            windows: windowService
+
+            power: powerService
+
+            audio: audioService
+
+            telemetry: telemetryService
+
+            media: mediaService
+
+            network: networkService
+
+            bluetooth: bluetoothService
+
+        }
+
+    }
+
 
     Variants {
 
