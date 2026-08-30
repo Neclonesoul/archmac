@@ -41,11 +41,11 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
 
-        radius: theme.radiusLarge
-        color: "#F011171C"
+        radius: theme.radiusPanel
+        color: theme.panelSurface
 
         border.width: 1
-        border.color: "#405C7484"
+        border.color: theme.panelBorder
 
         ColumnLayout {
             anchors.fill: parent

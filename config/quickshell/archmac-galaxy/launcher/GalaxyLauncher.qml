@@ -72,14 +72,14 @@ PanelWindow {
             topMargin: 92
         }
 
-        radius: 16
+        radius: theme.radiusPanel
 
         color:
-            "#F211171C"
+            theme.panelSurface
 
         border.width: 1
         border.color:
-            "#405C7484"
+            theme.panelBorder
 
         MouseArea {
             anchors.fill: parent

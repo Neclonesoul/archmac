@@ -72,23 +72,44 @@ Item {
                             return
                         }
 
+                        /*
+                         * SystemTrayItem.display() expects coordinates
+                         * relative to the host window, not this Row.
+                         *
+                         * mapToItem(null, ...) gives us window/scene
+                         * coordinates, so native menus open directly
+                         * beneath their actual tray icon.
+                         */
+                        const menuPoint =
+                            trayItem.mapToItem(
+                                null,
+                                0,
+                                trayItem.height
+                            )
+
+                        const menuX =
+                            Math.round(menuPoint.x)
+
+                        const menuY =
+                            Math.round(menuPoint.y)
+
                         if (mouse.button === Qt.RightButton) {
                             if (item.hasMenu) {
                                 item.display(
                                     tray.hostWindow,
-                                    trayItem.x,
-                                    trayItem.y + trayItem.height
+                                    menuX,
+                                    menuY
                                 )
                             }
 
                             return
                         }
 
-                        if (item.onlyMenu && item.hasMenu) {
+                        if (item.hasMenu) {
                             item.display(
                                 tray.hostWindow,
-                                trayItem.x,
-                                trayItem.y + trayItem.height
+                                menuX,
+                                menuY
                             )
                         } else {
                             item.activate()

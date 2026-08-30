@@ -131,7 +131,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
 
-        radius: theme.radiusLarge + 5
+        radius: theme.radiusPanel
         color: theme.surfaceOverlay
 
         border.width: 1

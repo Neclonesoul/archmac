@@ -32,6 +32,30 @@ PanelWindow {
     property bool networkPanelOpen: false
     property bool hardwareMonitorOpen: false
 
+    function toggleControlCentre() {
+        const next = !controlCentreOpen
+
+        networkPanelOpen = false
+        hardwareMonitorOpen = false
+        controlCentreOpen = next
+    }
+
+    function toggleNetworkPanel() {
+        const next = !networkPanelOpen
+
+        controlCentreOpen = false
+        hardwareMonitorOpen = false
+        networkPanelOpen = next
+    }
+
+    function toggleHardwareMonitor() {
+        const next = !hardwareMonitorOpen
+
+        controlCentreOpen = false
+        networkPanelOpen = false
+        hardwareMonitorOpen = next
+    }
+
     ControlCentre {
         theme: bar.theme
         audio: bar.audio
@@ -164,10 +188,8 @@ PanelWindow {
                 }
 
                 TapHandler {
-                    onTapped: {
-                        bar.hardwareMonitorOpen =
-                            !bar.hardwareMonitorOpen
-                    }
+                    onTapped:
+                        bar.toggleHardwareMonitor()
                 }
             }
 
@@ -243,8 +265,7 @@ PanelWindow {
                             return
                         }
 
-                        bar.controlCentreOpen =
-                            !bar.controlCentreOpen
+                        bar.toggleControlCentre()
                     }
 
                     onWheel: wheel => {
@@ -431,8 +452,7 @@ PanelWindow {
                     onClicked: {
                         bar.controlCentreOpen = false
 
-                        bar.networkPanelOpen =
-                            !bar.networkPanelOpen
+                        bar.toggleNetworkPanel()
                     }
                 }
             }

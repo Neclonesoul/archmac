@@ -1,3 +1,5 @@
+//@ pragma UseQApplication
+//@ pragma IconTheme Adwaita
 //@ pragma AppId archmac-galaxy
 //@ pragma ShellId archmac-galaxy
 

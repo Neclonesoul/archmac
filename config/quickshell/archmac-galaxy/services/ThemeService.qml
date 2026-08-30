@@ -12,9 +12,15 @@ QtObject {
     readonly property color accent: "#8AADF4"
     readonly property color border: "#25FFFFFF"
 
+    // Galaxy floating-surface language.
+    readonly property color panelSurface: "#F011171C"
+    readonly property color panelBorder: "#405C7484"
+    readonly property color cardBorder: "#30485A66"
+
     readonly property int radiusSmall: 8
     readonly property int radiusMedium: 10
     readonly property int radiusLarge: 13
+    readonly property int radiusPanel: 18
 
     readonly property int spacingSmall: 5
     readonly property int spacingMedium: 8
