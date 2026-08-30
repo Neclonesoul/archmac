@@ -137,6 +137,26 @@ PanelWindow {
         border.width: 1
         border.color: theme.border
 
+        transformOrigin: Item.TopRight
+
+        opacity: panel.opened ? 1 : 0
+        scale: panel.opened ? 1 : 0.97
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 120
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: 140
+                easing.type: Easing.OutCubic
+            }
+        }
+
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 16
