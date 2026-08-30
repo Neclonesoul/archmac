@@ -148,7 +148,7 @@ PanelWindow {
             Rectangle {
                 id: audioCapsule
 
-                implicitWidth: audioText.implicitWidth + 16
+                implicitWidth: audioContent.implicitWidth + 16
                 implicitHeight: 22
 
                 radius: theme.radiusSmall
@@ -158,6 +158,8 @@ PanelWindow {
                     : theme.surfaceRaised
 
                 Row {
+                    id: audioContent
+
                     anchors.centerIn: parent
                     spacing: 5
 
@@ -229,7 +231,7 @@ PanelWindow {
             }
 
             Rectangle {
-                implicitWidth: batteryText.implicitWidth + 16
+                implicitWidth: batteryContent.implicitWidth + 16
                 implicitHeight: 22
 
                 radius: theme.radiusSmall
@@ -237,6 +239,8 @@ PanelWindow {
                 color: theme.surfaceRaised
 
                 Row {
+                    id: batteryContent
+
                     anchors.centerIn: parent
                     spacing: 5
 
@@ -304,7 +308,7 @@ PanelWindow {
                 id: networkCapsule
 
                 implicitWidth:
-                    networkText.implicitWidth + 16
+                    networkContent.implicitWidth + 16
 
                 implicitHeight: 22
 
@@ -316,8 +320,10 @@ PanelWindow {
                         : theme.surfaceRaised
 
                 Row {
+                    id: networkContent
+
                     anchors.centerIn: parent
-                    spacing: 5
+                    spacing: 4
 
                     ArchIcon {
                         name:
@@ -325,11 +331,7 @@ PanelWindow {
                                 ? "wifi_off"
                                 : network.connectionType === "ethernet"
                                     ? "lan"
-                                    : network.signalPercent >= 70
-                                        ? "signal_wifi_4_bar"
-                                        : network.signalPercent >= 35
-                                            ? "network_wifi_2_bar"
-                                            : "network_wifi_1_bar"
+                                    : "wifi"
 
                         size: 15
 
@@ -339,15 +341,22 @@ PanelWindow {
                                 : theme.textSecondary
                     }
 
+                    ArchIcon {
+                        visible:
+                            network.connectionType !== "offline"
+
+                        name: "south"
+                        size: 13
+                        color: theme.accent
+                    }
+
                     Text {
                         id: networkText
 
                         text:
                             network.connectionType === "offline"
                                 ? "OFF"
-                                : network.wifiConnected
-                                    ? network.signalPercent + "%"
-                                    : network.shortLabel
+                                : network.downloadCompact
 
                         color:
                             network.connectionType === "offline"
@@ -355,7 +364,30 @@ PanelWindow {
                                 : theme.textSecondary
 
                         font.family: "0xProto"
-                        font.pixelSize: 9
+                        font.pixelSize: 8
+                        font.weight: Font.DemiBold
+                    }
+
+                    ArchIcon {
+                        visible:
+                            network.connectionType !== "offline"
+
+                        name: "north"
+                        size: 13
+                        color: theme.accent
+                    }
+
+                    Text {
+                        visible:
+                            network.connectionType !== "offline"
+
+                        text:
+                            network.uploadCompact
+
+                        color: theme.textSecondary
+
+                        font.family: "0xProto"
+                        font.pixelSize: 8
                         font.weight: Font.DemiBold
                     }
                 }
@@ -396,7 +428,7 @@ PanelWindow {
                 id: notificationCapsule
 
                 implicitWidth:
-                    notificationLabel.implicitWidth + 16
+                    notificationContent.implicitWidth + 16
 
                 implicitHeight: 22
 
@@ -412,6 +444,8 @@ PanelWindow {
                                 : theme.surfaceRaised
 
                 Row {
+                    id: notificationContent
+
                     anchors.centerIn: parent
                     spacing: 5
 
