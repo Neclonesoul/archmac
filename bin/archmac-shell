@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -u
+
+CONFIG="archmac-galaxy"
+LOG="${XDG_RUNTIME_DIR:-/tmp}/archmac-galaxy.log"
+
+galaxy_pids() {
+    pgrep -f "qs -c ${CONFIG}" 2>/dev/null || true
+}
+
+status() {
+    local pids
+    pids="$(galaxy_pids)"
+
+    if [[ -z "$pids" ]]; then
+        echo "ARCHMAC Galaxy is not running."
+        return 1
+    fi
+
+    echo "ARCHMAC Galaxy running:"
+    ps -o pid,etime,cmd -p $(printf '%s\n' "$pids" | tr '\n' ' ')
+}
+
+start() {
+    if galaxy_pids | grep -q .; then
+        echo "ARCHMAC Galaxy is already running."
+        status
+        return 0
+    fi
+
+    nohup qs -c "$CONFIG" >"$LOG" 2>&1 &
+    sleep 1
+
+    if galaxy_pids | grep -q .; then
+        echo "PASS — Galaxy started."
+        status
+    else
+        echo "FAIL — Galaxy failed to start."
+        echo "Log: $LOG"
+        return 1
+    fi
+}
+
+stop() {
+    local pids
+    pids="$(galaxy_pids)"
+
+    if [[ -z "$pids" ]]; then
+        echo "ARCHMAC Galaxy is already stopped."
+        return 0
+    fi
+
+    while read -r pid; do
+        [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+    done <<< "$pids"
+
+    sleep 1
+
+    if galaxy_pids | grep -q .; then
+        echo "FAIL — Galaxy process remains."
+        return 1
+    fi
+
+    echo "PASS — Galaxy stopped."
+}
+
+case "${1:-}" in
+    status)
+        status
+        ;;
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    log)
+        if [[ -f "$LOG" ]]; then
+            tail -n 120 "$LOG"
+        else
+            echo "No recovery log exists yet."
+        fi
+        ;;
+    *)
+        echo "Usage: archmac-shell {status|start|stop|restart|log}"
+        exit 2
+        ;;
+esac

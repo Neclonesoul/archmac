@@ -3,10 +3,11 @@
 set -u
 
 REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BACKUP="$HOME/.local/state/archmac/backups/$(date +%Y%m%d-%H%M%S)"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+BACKUP="$STATE_HOME/archmac/backups/$(date +%Y%m%d-%H%M%S)"
 
 echo "========================================"
-echo " ARCHMAC — SAFE INSTALLER"
+echo " ARCHMAC GALAXY — SAFE INSTALLER"
 echo "========================================"
 
 if [[ "$(uname -s)" != "Linux" ]]; then
@@ -15,7 +16,7 @@ if [[ "$(uname -s)" != "Linux" ]]; then
 fi
 
 if ! command -v pacman >/dev/null 2>&1; then
-    echo "STOP — ARCHMAC expects an Arch Linux system."
+    echo "STOP — ARCHMAC expects Arch Linux."
     exit 1
 fi
 
@@ -31,8 +32,7 @@ for path in \
     config/hypr/hyprlock.conf \
     config/hypr/hypridle.conf \
     config/hypr/hyprpaper.conf \
-    config/waybar/config.jsonc \
-    config/waybar/style.css \
+    config/quickshell/archmac-galaxy/shell.qml \
     config/kitty/kitty.conf
 do
     if [[ ! -f "$REPO/$path" ]]; then
@@ -44,11 +44,11 @@ done
 echo "PASS — repository structure"
 
 echo
-echo "=== BACKUP EXISTING CONFIG ==="
+echo "=== BACKUP ==="
 
 mkdir -p "$BACKUP"
 
-for d in hypr waybar kitty gtk-3.0 gtk-4.0; do
+for d in hypr quickshell kitty gtk-3.0 gtk-4.0 Thunar archmac waybar; do
     if [[ -e "$HOME/.config/$d" ]]; then
         cp -a "$HOME/.config/$d" "$BACKUP/"
         echo "BACKUP — ~/.config/$d"
@@ -58,20 +58,20 @@ done
 mkdir -p "$BACKUP/local-bin"
 
 for src in "$REPO"/bin/*; do
+    [[ -f "$src" ]] || continue
     name="$(basename "$src")"
 
     if [[ -e "$HOME/.local/bin/$name" ]]; then
         cp -a "$HOME/.local/bin/$name" "$BACKUP/local-bin/"
-        echo "BACKUP — ~/.local/bin/$name"
     fi
 done
 
 echo
-echo "=== INSTALL CONFIG ==="
+echo "=== INSTALL CONFIGURATION ==="
 
 mkdir -p \
     "$HOME/.config/hypr" \
-    "$HOME/.config/waybar" \
+    "$HOME/.config/quickshell/archmac-galaxy" \
     "$HOME/.config/kitty" \
     "$HOME/.config/gtk-3.0" \
     "$HOME/.config/gtk-4.0" \
@@ -79,9 +79,10 @@ mkdir -p \
     "$HOME/.config/archmac/wallpapers" \
     "$HOME/.local/bin"
 
-cp -a "$REPO/config/hypr/."   "$HOME/.config/hypr/"
-cp -a "$REPO/config/waybar/." "$HOME/.config/waybar/"
-cp -a "$REPO/config/kitty/."  "$HOME/.config/kitty/"
+cp -a "$REPO/config/hypr/." "$HOME/.config/hypr/"
+cp -a "$REPO/config/quickshell/archmac-galaxy/." \
+      "$HOME/.config/quickshell/archmac-galaxy/"
+cp -a "$REPO/config/kitty/." "$HOME/.config/kitty/"
 cp -a "$REPO/config/gtk-3.0/." "$HOME/.config/gtk-3.0/"
 cp -a "$REPO/config/gtk-4.0/." "$HOME/.config/gtk-4.0/"
 
@@ -89,31 +90,45 @@ if [[ -d "$REPO/config/Thunar" ]]; then
     cp -a "$REPO/config/Thunar/." "$HOME/.config/Thunar/"
 fi
 
-cp "$REPO/assets/wallpapers/archmac.png" \
-   "$HOME/.config/archmac/wallpapers/archmac.png"
+if [[ -f "$REPO/assets/wallpapers/archmac.png" ]]; then
+    cp "$REPO/assets/wallpapers/archmac.png" \
+       "$HOME/.config/archmac/wallpapers/archmac.png"
+fi
 
-cp "$REPO"/bin/* "$HOME/.local/bin/"
-chmod +x "$HOME"/.local/bin/{archmac-cliphist,mac-*,waybar-volume-menu}
+for src in "$REPO"/bin/*; do
+    [[ -f "$src" ]] || continue
+    name="$(basename "$src")"
+    cp "$src" "$HOME/.local/bin/$name"
+
+    if [[ -x "$src" ]]; then
+        chmod +x "$HOME/.local/bin/$name"
+    fi
+done
 
 echo "PASS — configuration installed"
-echo "PASS — helper scripts installed"
+echo "PASS — helper commands installed"
 
 echo
-echo "=== VERIFY ==="
+echo "=== REQUIRED RUNTIME ==="
 
 MISSING=0
 
 for cmd in \
     Hyprland \
-    waybar \
+    hyprctl \
+    qs \
     kitty \
+    hyprpaper \
+    hypridle \
+    hyprlock \
     brightnessctl \
     wpctl \
     playerctl \
     grim \
     slurp \
     wl-copy \
-    cliphist
+    cliphist \
+    qalc
 do
     if command -v "$cmd" >/dev/null 2>&1; then
         echo "PASS — $cmd"
@@ -124,18 +139,28 @@ do
 done
 
 echo
+echo "=== COMPATIBILITY / FALLBACK ==="
+
+for cmd in nm-applet blueman-applet wofi; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        echo "AVAILABLE — $cmd"
+    else
+        echo "OPTIONAL — $cmd"
+    fi
+done
+
+echo
 echo "Backup preserved at:"
 echo "$BACKUP"
 
 if [[ "$MISSING" -ne 0 ]]; then
     echo
-    echo "WARNING — configuration installed, but dependencies are missing."
-    echo "Install the missing packages before starting ARCHMAC."
+    echo "WARNING — required runtime dependencies are missing."
     exit 2
 fi
 
 echo
 echo "========================================"
-echo " ARCHMAC INSTALL COMPLETE"
+echo " ARCHMAC GALAXY INSTALL COMPLETE"
 echo " Log out and start a fresh Hyprland session."
 echo "========================================"
