@@ -44,6 +44,7 @@ local menu = "qs -c archmac-galaxy ipc call launcher toggle"
 -- Or execute your favorite apps at launch like this:
 --
 -- hl.on("hyprland.start", function ()
+hl.exec_cmd("qs -c archmac-galaxy")
 --   hl.exec_cmd(terminal)
 --   hl.exec_cmd("nm-applet")
 -- end)
@@ -432,8 +433,7 @@ hl.window_rule({
 })
 
 hl.on("hyprland.start", function ()
- hl.exec_cmd("waybar")
-
+ 
 
 
 
@@ -452,8 +452,7 @@ hl.bind(mainMod .. " + SHIFT + period", hl.dsp.layout("swapcol r"))
 hl.exec_cmd("hyprpaper")
  hl.exec_cmd("nm-applet")
  hl.exec_cmd("blueman-applet")
-    hl.exec_cmd("mako")
- hl.exec_cmd("hypridle")
+  hl.exec_cmd("hypridle")
 hl.exec_cmd(home .. "/.local/bin/archmac-cliphist")
 end)
 
