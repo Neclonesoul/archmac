@@ -8,6 +8,7 @@ import "../tray"
 import "../../panels/controlcentre"
 import "../../panels/network"
 import "../../components"
+import "../../monitor"
 
 PanelWindow {
     id: bar
@@ -29,6 +30,7 @@ PanelWindow {
 
     property bool controlCentreOpen: false
     property bool networkPanelOpen: false
+    property bool hardwareMonitorOpen: false
 
     ControlCentre {
         theme: bar.theme
@@ -56,6 +58,17 @@ PanelWindow {
 
         onCloseRequested:
             bar.networkPanelOpen = false
+    }
+
+    HardwareMonitor {
+        shellScreen: bar.shellScreen
+        theme: bar.theme
+        telemetry: bar.telemetry
+
+        opened: bar.hardwareMonitorOpen
+
+        onCloseRequested:
+            bar.hardwareMonitorOpen = false
     }
 
     screen: shellScreen
@@ -142,6 +155,19 @@ PanelWindow {
                     font.family: "0xProto"
                     font.pixelSize: 8
                     font.weight: Font.Medium
+                }
+
+                HoverHandler {
+                    id: telemetryHover
+                    cursorShape:
+                        Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: {
+                        bar.hardwareMonitorOpen =
+                            !bar.hardwareMonitorOpen
+                    }
                 }
             }
 
