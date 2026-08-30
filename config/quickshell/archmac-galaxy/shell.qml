@@ -13,6 +13,7 @@ import "osd"
 import "notifications"
 import "launcher"
 
+import "overview"
 ShellRoot {
     id: root
 
@@ -30,6 +31,10 @@ ShellRoot {
 
     WorkspaceService {
         id: workspaceService
+    }
+
+    WindowService {
+        id: windowService
     }
 
     PowerService {
@@ -70,6 +75,13 @@ ShellRoot {
 
     LauncherService {
         id: launcherService
+    }
+
+
+    OverviewService {
+
+        id: overviewService
+
     }
 
     SystemClock {
@@ -124,6 +136,31 @@ ShellRoot {
             )
         }
     }
+
+    Variants {
+
+        model: Quickshell.screens
+
+
+        GalaxyOverview {
+
+            required property var modelData
+
+
+            shellScreen: modelData
+
+            theme: themeService
+
+            overview: overviewService
+
+            workspaces: workspaceService
+
+            windows: windowService
+
+        }
+
+    }
+
 
     Variants {
         model: Quickshell.screens
