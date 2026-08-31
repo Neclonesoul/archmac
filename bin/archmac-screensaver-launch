@@ -5,7 +5,9 @@ set -u
 SCREENSAVER="$HOME/.local/bin/archmac-screensaver"
 
 # Never stack multiple Galaxy windows.
-if pgrep -f '[a]rchmac-screensaver' >/dev/null 2>&1; then
+# Match only the actual screensaver process.
+# Do NOT match archmac-screensaver-launch itself.
+if pgrep -f '/archmac-screensaver$' >/dev/null 2>&1; then
     exit 0
 fi
 
