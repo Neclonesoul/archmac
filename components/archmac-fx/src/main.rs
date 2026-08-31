@@ -5,7 +5,6 @@ use std::{
 };
 
 use ratatui::{
-    TerminalOptions, Viewport,
     prelude::*,
     widgets::{Block, Borders, Paragraph},
 };
@@ -233,57 +232,6 @@ fn run_fullscreen(preset: Preset, message: &str) -> io::Result<()> {
     })
 }
 
-fn run_inline(preset: Preset, message: &str) -> io::Result<()> {
-    let line_count = message.lines().count().max(1);
-    let height = (line_count + 2).min(u16::MAX as usize) as u16;
-
-    let options = TerminalOptions {
-        viewport: Viewport::Inline(height),
-    };
-
-    let mut terminal = ratatui::init_with_options(options);
-    let mut effects: EffectManager<()> = EffectManager::default();
-
-    effects.add_effect(effect_for(preset));
-
-    let started = Instant::now();
-    let mut previous = Instant::now();
-
-    let result = (|| -> io::Result<()> {
-        loop {
-            let now = Instant::now();
-            let elapsed = now.duration_since(previous);
-            previous = now;
-
-            terminal.draw(|frame| {
-                let area = frame.area();
-
-                let widget = Paragraph::new(message).alignment(Alignment::Left).style(
-                    Style::default()
-                        .fg(preset.colour())
-                        .add_modifier(Modifier::BOLD),
-                );
-
-                frame.render_widget(widget, area);
-
-                effects.process_effects(elapsed.into(), frame.buffer_mut(), area);
-            })?;
-
-            std::thread::sleep(Duration::from_millis(16));
-
-            if !effects.is_running() || started.elapsed() >= Duration::from_secs(4) {
-                break;
-            }
-        }
-
-        Ok(())
-    })();
-
-    ratatui::restore();
-
-    result
-}
-
 fn usage() {
     println!(
         "\
@@ -291,7 +239,6 @@ ARCHMAC Galaxy terminal effects
 
 USAGE:
     archmac-fx <preset> [message...]
-    archmac-fx --inline <preset> [message...]
 
 PRESETS:
     boot
@@ -305,8 +252,6 @@ PRESETS:
 
 EXAMPLES:
     archmac-fx boot
-    archmac-fx --inline success 'SYSTEM NOMINAL'
-    archmac-fx --inline warn 'PORTAL RECONNECTING'
     archmac-fx reveal 'GALAXY ONLINE'
     archmac-fx success 'SYSTEM NOMINAL'
     archmac-fx warn 'PORTAL RECONNECTING'
@@ -329,9 +274,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let inline = args[0] == "--inline";
-
-    let preset_index = if inline { 1 } else { 0 };
+    let preset_index = 0;
 
     if args.len() <= preset_index {
         usage();
@@ -353,9 +296,5 @@ fn main() -> io::Result<()> {
         &supplied
     };
 
-    if inline {
-        run_inline(preset, message)
-    } else {
-        run_fullscreen(preset, message)
-    }
+    run_fullscreen(preset, message)
 }

@@ -1,0 +1,356 @@
+#!/usr/bin/env bash
+
+# ARCHMAC Galaxy Status
+# Safe terminal implementation:
+# - no Ratatui
+# - no raw mode
+# - no alternate screen
+# - no cursor ownership
+# - no viewport manipulation
+
+set -u
+
+# ------------------------------------------------------------
+# COLOUR
+# ------------------------------------------------------------
+
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+    RESET=$'\033[0m'
+    BOLD=$'\033[1m'
+    DIM=$'\033[2m'
+
+    CYAN=$'\033[36m'
+    GREEN=$'\033[32m'
+    YELLOW=$'\033[33m'
+    RED=$'\033[31m'
+    WHITE=$'\033[37m'
+    GRAY=$'\033[90m'
+else
+    RESET=""
+    BOLD=""
+    DIM=""
+    CYAN=""
+    GREEN=""
+    YELLOW=""
+    RED=""
+    WHITE=""
+    GRAY=""
+fi
+
+# ------------------------------------------------------------
+# RENDERING
+# ------------------------------------------------------------
+
+header() {
+    printf '\n'
+    printf '%s%sARCHMAC // GALAXY STATUS%s\n' \
+        "$BOLD" "$CYAN" "$RESET"
+
+    printf '%s────────────────────────────────────────%s\n' \
+        "$GRAY" "$RESET"
+}
+
+row() {
+    local kind="$1"
+    local label="$2"
+    local value="$3"
+
+    local colour="$WHITE"
+    local symbol="●"
+
+    case "$kind" in
+        OK)
+            colour="$GREEN"
+            symbol="●"
+            ;;
+        WARN)
+            colour="$YELLOW"
+            symbol="◆"
+            ;;
+        FAIL)
+            colour="$RED"
+            symbol="▲"
+            ;;
+        INFO)
+            colour="$CYAN"
+            symbol="○"
+            ;;
+    esac
+
+    printf ' %s%s%s  %s%-22s%s %s%s%s\n' \
+        "$colour" \
+        "$symbol" \
+        "$RESET" \
+        "$GRAY" \
+        "$label" \
+        "$RESET" \
+        "$colour" \
+        "$value" \
+        "$RESET"
+}
+
+footer_ready() {
+    printf '%s────────────────────────────────────────%s\n' \
+        "$GRAY" "$RESET"
+
+    printf ' %s●%s  %s%sGALAXY // SYSTEM READY%s\n' \
+        "$GREEN" "$RESET" \
+        "$BOLD" "$GREEN" "$RESET"
+
+    printf '\n'
+}
+
+footer_attention() {
+    printf '%s────────────────────────────────────────%s\n' \
+        "$GRAY" "$RESET"
+
+    printf ' %s▲%s  %s%sGALAXY // ATTENTION REQUIRED%s\n' \
+        "$RED" "$RESET" \
+        "$BOLD" "$RED" "$RESET"
+
+    printf '\n'
+}
+
+
+# ------------------------------------------------------------
+# COLLECT STATE
+# ------------------------------------------------------------
+
+overall_fail=0
+overall_warn=0
+
+header
+
+
+# HYPRLAND
+if pgrep -x Hyprland >/dev/null 2>&1; then
+    row OK "HYPRLAND" "ONLINE"
+else
+    row FAIL "HYPRLAND" "OFFLINE"
+    overall_fail=1
+fi
+
+
+# GALAXY SHELL
+if pgrep -x qs >/dev/null 2>&1 ||
+   pgrep -f '[q]uickshell' >/dev/null 2>&1; then
+
+    row OK "GALAXY SHELL" "ONLINE"
+else
+    row WARN "GALAXY SHELL" "NOT RUNNING"
+    overall_warn=1
+fi
+
+
+# NETWORK
+network="$(
+    nmcli -t -f STATE general 2>/dev/null |
+    head -n1 ||
+    true
+)"
+
+case "$network" in
+    connected)
+        row OK "NETWORK" "ONLINE"
+        ;;
+    connecting)
+        row WARN "NETWORK" "CONNECTING"
+        overall_warn=1
+        ;;
+    disconnected)
+        row WARN "NETWORK" "OFFLINE"
+        overall_warn=1
+        ;;
+    *)
+        row FAIL "NETWORK" "UNKNOWN"
+        overall_fail=1
+        ;;
+esac
+
+
+# PIPEWIRE
+if systemctl --user is-active --quiet pipewire.service 2>/dev/null; then
+    row OK "PIPEWIRE" "ONLINE"
+else
+    row FAIL "PIPEWIRE" "FAILED"
+    overall_fail=1
+fi
+
+
+# WIREPLUMBER
+if systemctl --user is-active --quiet wireplumber.service 2>/dev/null; then
+    row OK "WIREPLUMBER" "ONLINE"
+else
+    row FAIL "WIREPLUMBER" "FAILED"
+    overall_fail=1
+fi
+
+
+# AUDIO
+audio="$(
+    wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null ||
+    true
+)"
+
+if [[ -n "$audio" ]]; then
+    row OK "AUDIO" "$audio"
+else
+    row WARN "AUDIO" "UNAVAILABLE"
+    overall_warn=1
+fi
+
+
+# PORTALS
+portal_core="$(
+    systemctl --user is-active \
+        xdg-desktop-portal.service 2>/dev/null ||
+    true
+)"
+
+portal_hypr="$(
+    systemctl --user is-active \
+        xdg-desktop-portal-hyprland.service 2>/dev/null ||
+    true
+)"
+
+portal_gtk="$(
+    systemctl --user is-active \
+        xdg-desktop-portal-gtk.service 2>/dev/null ||
+    true
+)"
+
+if [[ "$portal_core" == "active" &&
+      "$portal_hypr" == "active" &&
+      "$portal_gtk" == "active" ]]; then
+
+    row OK "PORTALS" "NOMINAL"
+
+elif [[ "$portal_core" == "active" ]]; then
+
+    row WARN "PORTALS" "DEGRADED"
+    overall_warn=1
+
+else
+    row FAIL "PORTALS" "FAILED"
+    overall_fail=1
+fi
+
+
+# POWER PROFILE
+power="$(
+    powerprofilesctl get 2>/dev/null ||
+    true
+)"
+
+if [[ -n "$power" ]]; then
+    row INFO "POWER PROFILE" "${power^^}"
+else
+    row WARN "POWER PROFILE" "UNKNOWN"
+    overall_warn=1
+fi
+
+
+# BATTERY
+battery=""
+
+for candidate in /sys/class/power_supply/BAT*; do
+    if [[ -d "$candidate" ]]; then
+        battery="$candidate"
+        break
+    fi
+done
+
+if [[ -n "$battery" ]]; then
+
+    capacity="$(
+        cat "$battery/capacity" 2>/dev/null ||
+        true
+    )"
+
+    state="$(
+        cat "$battery/status" 2>/dev/null ||
+        true
+    )"
+
+    if [[ "$capacity" =~ ^[0-9]+$ ]]; then
+
+        text="${capacity}%"
+
+        if [[ -n "$state" ]]; then
+            text+=" ${state^^}"
+        fi
+
+        if (( capacity <= 10 )); then
+            row FAIL "BATTERY" "$text"
+            overall_fail=1
+
+        elif (( capacity <= 25 )); then
+            row WARN "BATTERY" "$text"
+            overall_warn=1
+
+        else
+            row OK "BATTERY" "$text"
+        fi
+    else
+        row WARN "BATTERY" "UNKNOWN"
+        overall_warn=1
+    fi
+else
+    row WARN "BATTERY" "NOT DETECTED"
+    overall_warn=1
+fi
+
+
+# USER SERVICES
+user_failed="$(
+    systemctl --user --failed --no-legend --plain 2>/dev/null |
+    awk 'NF {n++} END {print n+0}'
+)"
+
+if (( user_failed == 0 )); then
+    row OK "USER SERVICES" "NOMINAL"
+else
+    row FAIL "USER SERVICES" "${user_failed} FAILED"
+    overall_fail=1
+fi
+
+
+# SYSTEM SERVICES
+system_failed="$(
+    systemctl --failed --no-legend --plain 2>/dev/null |
+    awk 'NF {n++} END {print n+0}'
+)"
+
+if (( system_failed == 0 )); then
+    row OK "SYSTEM SERVICES" "NOMINAL"
+else
+    row FAIL "SYSTEM SERVICES" "${system_failed} FAILED"
+    overall_fail=1
+fi
+
+
+# KERNEL
+kernel="$(
+    uname -r 2>/dev/null ||
+    true
+)"
+
+if [[ -n "$kernel" ]]; then
+    row INFO "KERNEL" "$kernel"
+else
+    row WARN "KERNEL" "UNKNOWN"
+    overall_warn=1
+fi
+
+
+# ------------------------------------------------------------
+# FINAL STATE
+# ------------------------------------------------------------
+
+if (( overall_fail == 0 )); then
+    footer_ready
+else
+    footer_attention
+fi
+
+exit "$overall_fail"
