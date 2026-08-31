@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 
 """
-ARCHMAC Galaxy Screensaver
+ARCHMAC Galaxy Screensaver v2
 
-Fullscreen procedural ANSI screensaver for terminal use.
+Cinematic procedural ANSI screensaver.
 
-Design:
-- alternate-screen only
-- restores terminal on every exit path
-- no Ratatui inline viewport
-- no third-party Python packages
-- exits on any keyboard or mouse input
-- procedural multi-layer starfield
-- rotating Galaxy scenes
-- live ARCHMAC telemetry
+Scenes:
+    DEEP SPACE
+    ORBITAL
+    WARP
+    RADAR
+    NEBULA
+    SYSTEM CORE
+
+Properties:
+    - fullscreen alternate-screen only
+    - no Ratatui inline viewport
+    - restores terminal state on every exit
+    - any keyboard or mouse input exits
+    - 24 FPS target
+    - layered starfield
+    - per-object ANSI colour
+    - meteors
+    - cinematic scene transitions
+    - live ARCHMAC telemetry
+    - zero third-party Python dependencies
 """
 
 from __future__ import annotations
@@ -32,38 +43,70 @@ import tty
 from dataclasses import dataclass
 
 
+# ---------------------------------------------------------------------------
+# Terminal
+# ---------------------------------------------------------------------------
+
 ESC = "\x1b"
 CSI = f"{ESC}["
 
 ALT_ON = f"{CSI}?1049h"
 ALT_OFF = f"{CSI}?1049l"
+
 CURSOR_HIDE = f"{CSI}?25l"
 CURSOR_SHOW = f"{CSI}?25h"
+
 CLEAR = f"{CSI}2J"
 HOME = f"{CSI}H"
+RESET = f"{CSI}0m"
 
-# Mouse movement/button reporting so touching the mouse wakes the saver.
 MOUSE_ON = f"{CSI}?1003h{CSI}?1006h"
 MOUSE_OFF = f"{CSI}?1003l{CSI}?1006l"
 
-RESET = f"{CSI}0m"
-BOLD = f"{CSI}1m"
-DIM = f"{CSI}2m"
 
-C_DARK = f"{CSI}38;5;240m"
-C_DIM = f"{CSI}38;5;245m"
-C_SOFT = f"{CSI}38;5;250m"
-C_WHITE = f"{CSI}38;5;255m"
-C_CYAN = f"{CSI}38;5;117m"
-C_BLUE = f"{CSI}38;5;75m"
-C_VIOLET = f"{CSI}38;5;141m"
-C_AMBER = f"{CSI}38;5;221m"
-C_GREEN = f"{CSI}38;5;120m"
+# ---------------------------------------------------------------------------
+# Galaxy palette
+# ---------------------------------------------------------------------------
 
+C_DARK = 238
+C_DIM = 242
+C_STAR = 250
+C_WHITE = 255
+
+C_CYAN = 117
+C_CYAN_HI = 159
+
+C_BLUE = 75
+C_BLUE_HI = 111
+
+C_VIOLET = 141
+C_VIOLET_HI = 183
+
+C_GREEN = 120
+C_GREEN_HI = 157
+
+C_AMBER = 221
+C_AMBER_HI = 229
+
+C_MAGENTA = 177
+C_RED = 203
+
+
+def fg(code: int) -> str:
+    return f"{CSI}38;5;{code}m"
+
+
+# ---------------------------------------------------------------------------
+# Global lifecycle
+# ---------------------------------------------------------------------------
 
 RUNNING = True
 ORIGINAL_TERM = None
 
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
 
 @dataclass
 class Star:
@@ -74,17 +117,47 @@ class Star:
     layer: int
 
 
+@dataclass
+class Meteor:
+    x: float
+    y: float
+    vx: float
+    vy: float
+    life: float
+    max_life: float
+
+
+@dataclass
+class NebulaPoint:
+    x: float
+    y: float
+    phase: float
+    depth: float
+
+
+# ---------------------------------------------------------------------------
+# System information
+# ---------------------------------------------------------------------------
+
+def read_file(path: str) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
 def safe_run(*cmd: str) -> str:
     try:
-        p = subprocess.run(
+        result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
-            timeout=0.7,
+            timeout=0.6,
             check=False,
         )
-        return p.stdout.strip()
+        return result.stdout.strip()
     except Exception:
         return ""
 
@@ -95,9 +168,8 @@ def battery() -> str:
     try:
         for name in os.listdir(root):
             base = os.path.join(root, name)
-            typ = read_file(os.path.join(base, "type"))
 
-            if typ != "Battery":
+            if read_file(os.path.join(base, "type")) != "Battery":
                 continue
 
             capacity = read_file(os.path.join(base, "capacity")) or "?"
@@ -110,16 +182,14 @@ def battery() -> str:
     return "N/A"
 
 
-def read_file(path: str) -> str:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except OSError:
-        return ""
-
-
 def network() -> str:
-    value = safe_run("nmcli", "-t", "-f", "STATE", "general").lower()
+    value = safe_run(
+        "nmcli",
+        "-t",
+        "-f",
+        "STATE",
+        "general",
+    ).lower()
 
     if "connected" in value:
         return "ONLINE"
@@ -132,6 +202,7 @@ def network() -> str:
 
 def power_profile() -> str:
     value = safe_run("powerprofilesctl", "get")
+
     return value.upper() if value else "UNKNOWN"
 
 
@@ -141,8 +212,12 @@ def uptime() -> str:
     except Exception:
         return "UNKNOWN"
 
-    hours = int(seconds // 3600)
+    days = int(seconds // 86400)
+    hours = int((seconds % 86400) // 3600)
     minutes = int((seconds % 3600) // 60)
+
+    if days:
+        return f"{days}D {hours:02d}H"
 
     if hours:
         return f"{hours}H {minutes:02d}M"
@@ -150,69 +225,322 @@ def uptime() -> str:
     return f"{minutes}M"
 
 
-def telemetry() -> list[tuple[str, str]]:
+def telemetry() -> dict[str, str]:
+    return {
+        "SYSTEM": "NOMINAL",
+        "LINK": network(),
+        "POWER": power_profile(),
+        "CELL": battery(),
+        "KERNEL": os.uname().release,
+        "UPTIME": uptime(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Canvas
+# ---------------------------------------------------------------------------
+
+Cell = tuple[str, int | None]
+
+
+def new_canvas(width: int, height: int) -> list[list[Cell]]:
     return [
-        ("SYSTEM", "NOMINAL"),
-        ("LINK", network()),
-        ("POWER", power_profile()),
-        ("CELL", battery()),
-        ("KERNEL", os.uname().release),
-        ("UPTIME", uptime()),
+        [(" ", None) for _ in range(width)]
+        for _ in range(height)
     ]
 
 
-def terminal_size() -> tuple[int, int]:
-    size = shutil.get_terminal_size((100, 30))
-    return max(40, size.columns), max(18, size.lines)
+def put(
+    canvas: list[list[Cell]],
+    x: int,
+    y: int,
+    text: str,
+    colour: int = C_STAR,
+) -> None:
 
-
-def put(canvas: list[list[str]], x: int, y: int, text: str) -> None:
     if y < 0 or y >= len(canvas):
         return
 
     width = len(canvas[y])
 
-    if x >= width:
-        return
+    for offset, ch in enumerate(text):
+        xx = x + offset
 
-    start = max(0, x)
-    source_start = max(0, -x)
-
-    for i, ch in enumerate(text[source_start:]):
-        xx = start + i
-
-        if xx >= width:
-            break
-
-        canvas[y][xx] = ch
+        if 0 <= xx < width:
+            canvas[y][xx] = (ch, colour)
 
 
-def centred(canvas: list[list[str]], y: int, text: str) -> None:
+def centred(
+    canvas: list[list[Cell]],
+    y: int,
+    text: str,
+    colour: int = C_STAR,
+) -> None:
+
     if not canvas:
         return
 
     width = len(canvas[0])
-    x = max(0, (width - visible_len(text)) // 2)
-    put(canvas, x, y, text)
+
+    put(
+        canvas,
+        (width - len(text)) // 2,
+        y,
+        text,
+        colour,
+    )
 
 
-def visible_len(text: str) -> int:
-    # Text passed here is normally uncoloured.
-    return len(text)
+def render_canvas(canvas: list[list[Cell]]) -> str:
+    parts: list[str] = []
+
+    current_colour: int | None = None
+
+    for row_index, row in enumerate(canvas):
+        for ch, colour in row:
+            if colour != current_colour:
+                if colour is None:
+                    parts.append(RESET)
+                else:
+                    parts.append(fg(colour))
+
+                current_colour = colour
+
+            parts.append(ch)
+
+        if row_index != len(canvas) - 1:
+            parts.append("\n")
+
+    parts.append(RESET)
+
+    return "".join(parts)
 
 
-def make_stars(width: int, height: int) -> list[Star]:
-    count = max(45, min(180, (width * height) // 22))
+def terminal_size() -> tuple[int, int]:
+    size = shutil.get_terminal_size((100, 30))
+
+    return (
+        max(40, size.columns),
+        max(18, size.lines),
+    )
+
+
+# ---------------------------------------------------------------------------
+# ARCHMAC title artwork
+# ---------------------------------------------------------------------------
+
+ARCHMAC_BIG = [
+    r"    _    ____   ____ _   _ __  __    _    ____ ",
+    r"   / \  |  _ \ / ___| | | |  \/  |  / \  / ___|",
+    r"  / _ \ | |_) | |   | |_| | |\/| | / _ \| |    ",
+    r" / ___ \|  _ <| |___|  _  | |  | |/ ___ \ |___ ",
+    r"/_/   \_\_| \_\\____|_| |_|_|  |_/_/   \_\____|",
+]
+
+GALAXY_BIG = [
+    r"  ____    _    _        _    __  ____   __",
+    r" / ___|  / \  | |      / \   \ \/ /\ \ / /",
+    r"| |  _  / _ \ | |     / _ \   \  /  \ V / ",
+    r"| |_| |/ ___ \| |___ / ___ \  /  \   | |  ",
+    r" \____/_/   \_\_____/_/   \_\/_/\_\  |_|  ",
+]
+
+
+def big_title(
+    canvas: list[list[Cell]],
+    elapsed: float,
+) -> None:
+
+    h = len(canvas)
+    w = len(canvas[0])
+
+    if w < 70 or h < 24:
+        centred(
+            canvas,
+            h // 2 - 1,
+            "A R C H M A C",
+            C_CYAN_HI,
+        )
+        centred(
+            canvas,
+            h // 2 + 1,
+            "G A L A X Y",
+            C_VIOLET_HI,
+        )
+        return
+
+    total = len(ARCHMAC_BIG) + len(GALAXY_BIG) + 2
+    start_y = max(2, (h - total) // 2)
+
+    palette = [
+        C_CYAN_HI,
+        C_BLUE_HI,
+        C_VIOLET_HI,
+        C_MAGENTA,
+        C_AMBER_HI,
+        C_GREEN_HI,
+        C_WHITE,
+    ]
+
+    fill_chars = [
+        ".",
+        ":",
+        "+",
+        "*",
+        "#",
+        "@",
+        "%",
+        "&",
+    ]
+
+    # Phase 1: animated character-fill reveal.
+    # Each real logo glyph is temporarily replaced with a shifting,
+    # multi-colour character field before resolving into the final logo.
+    fill_duration = 2.4
+    settle_duration = 1.2
+
+    for row_index, line in enumerate(ARCHMAC_BIG):
+        y = start_y + row_index
+        x0 = (w - len(line)) // 2
+
+        for column, final_ch in enumerate(line):
+            if final_ch == " ":
+                continue
+
+            phase = (
+                elapsed * 9.0
+                + column * 0.47
+                + row_index * 1.3
+            )
+
+            reveal_position = (
+                column / max(1, len(line) - 1)
+            ) * fill_duration
+
+            age = elapsed - reveal_position
+
+            if age < 0:
+                continue
+
+            if age < settle_duration:
+                char_index = int(
+                    abs(math.sin(phase))
+                    * (len(fill_chars) - 1)
+                )
+
+                colour_index = int(
+                    (
+                        phase
+                        + elapsed * 4.0
+                    )
+                    % len(palette)
+                )
+
+                put(
+                    canvas,
+                    x0 + column,
+                    y,
+                    fill_chars[char_index],
+                    palette[colour_index],
+                )
+            else:
+                put(
+                    canvas,
+                    x0 + column,
+                    y,
+                    final_ch,
+                    C_CYAN_HI,
+                )
+
+    galaxy_start = start_y + len(ARCHMAC_BIG) + 2
+
+    # GALAXY comes in after ARCHMAC has largely resolved.
+    galaxy_elapsed = elapsed - 1.8
+
+    if galaxy_elapsed > 0:
+        for row_index, line in enumerate(GALAXY_BIG):
+            y = galaxy_start + row_index
+            x0 = (w - len(line)) // 2
+
+            for column, final_ch in enumerate(line):
+                if final_ch == " ":
+                    continue
+
+                reveal_position = (
+                    column / max(1, len(line) - 1)
+                ) * 1.6
+
+                age = galaxy_elapsed - reveal_position
+
+                if age < 0:
+                    continue
+
+                phase = (
+                    galaxy_elapsed * 8.0
+                    + column * 0.55
+                    + row_index
+                )
+
+                if age < 0.8:
+                    char_index = int(
+                        abs(math.sin(phase))
+                        * (len(fill_chars) - 1)
+                    )
+
+                    colour_index = int(
+                        (
+                            phase
+                            + galaxy_elapsed * 3.0
+                        )
+                        % len(palette)
+                    )
+
+                    put(
+                        canvas,
+                        x0 + column,
+                        y,
+                        fill_chars[char_index],
+                        palette[colour_index],
+                    )
+                else:
+                    put(
+                        canvas,
+                        x0 + column,
+                        y,
+                        final_ch,
+                        C_VIOLET_HI,
+                    )
+
+
+# ---------------------------------------------------------------------------
+# Starfield
+# ---------------------------------------------------------------------------
+
+def make_stars(
+    width: int,
+    height: int,
+) -> list[Star]:
+
+    count = max(
+        45,
+        min(180, (width * height) // 22),
+    )
+
     stars: list[Star] = []
 
     for _ in range(count):
-        layer = random.choices([0, 1, 2], weights=[6, 3, 1])[0]
+        layer = random.choices(
+            [0, 1, 2],
+            weights=[6, 3, 1],
+        )[0]
 
         stars.append(
             Star(
                 x=random.random() * width,
                 y=random.random() * height,
-                speed=(0.7 + layer * 0.65) * random.uniform(0.7, 1.25),
+                speed=(
+                    0.7 + layer * 0.65
+                ) * random.uniform(0.7, 1.25),
                 phase=random.random() * math.tau,
                 layer=layer,
             )
@@ -227,6 +555,7 @@ def update_stars(
     width: int,
     height: int,
 ) -> None:
+
     for star in stars:
         star.x -= star.speed * dt
 
@@ -237,168 +566,798 @@ def update_stars(
 
 
 def draw_stars(
-    canvas: list[list[str]],
+    canvas: list[list[Cell]],
     stars: list[Star],
     now: float,
 ) -> None:
+
     glyphs = [".", "+", "*"]
+    colours = [C_DIM, C_STAR, C_WHITE]
 
     for star in stars:
-        x = int(star.x)
-        y = int(star.y)
-
-        shimmer = math.sin(now * (1.0 + star.layer * 0.25) + star.phase)
+        shimmer = math.sin(
+            now * (1.0 + star.layer * 0.25)
+            + star.phase
+        )
 
         if star.layer == 0 and shimmer < -0.45:
             continue
 
-        glyph = glyphs[star.layer]
-        put(canvas, x, y, glyph)
+        put(
+            canvas,
+            int(star.x),
+            int(star.y),
+            glyphs[star.layer],
+            colours[star.layer],
+        )
 
 
-def scene_galaxy(
-    canvas: list[list[str]],
-    elapsed: float,
-    data: list[tuple[str, str]],
+# ---------------------------------------------------------------------------
+# Meteors
+# ---------------------------------------------------------------------------
+
+def spawn_meteor(
+    width: int,
+    height: int,
+) -> Meteor:
+
+    y = random.uniform(
+        2,
+        max(3, height * 0.55),
+    )
+
+    return Meteor(
+        x=width + random.uniform(2, 15),
+        y=y,
+        vx=random.uniform(-32, -22),
+        vy=random.uniform(7, 12),
+        life=0.0,
+        max_life=random.uniform(1.1, 1.8),
+    )
+
+
+def update_meteors(
+    meteors: list[Meteor],
+    dt: float,
 ) -> None:
+
+    for meteor in meteors:
+        meteor.x += meteor.vx * dt
+        meteor.y += meteor.vy * dt
+        meteor.life += dt
+
+    meteors[:] = [
+        m
+        for m in meteors
+        if m.life < m.max_life
+    ]
+
+
+def draw_meteors(
+    canvas: list[list[Cell]],
+    meteors: list[Meteor],
+) -> None:
+
+    trail = [
+        ("*", C_AMBER_HI),
+        ("+", C_AMBER),
+        ("-", C_AMBER),
+        (".", C_DIM),
+        (".", C_DARK),
+    ]
+
+    for meteor in meteors:
+        x = int(meteor.x)
+        y = int(meteor.y)
+
+        for i, (glyph, colour) in enumerate(trail):
+            put(
+                canvas,
+                x + i * 2,
+                y - i,
+                glyph,
+                colour,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Nebula particles
+# ---------------------------------------------------------------------------
+
+def make_nebula(
+    width: int,
+    height: int,
+) -> list[NebulaPoint]:
+
+    count = min(
+        280,
+        max(90, (width * height) // 30),
+    )
+
+    return [
+        NebulaPoint(
+            x=random.uniform(0, width),
+            y=random.uniform(0, height),
+            phase=random.uniform(0, math.tau),
+            depth=random.random(),
+        )
+        for _ in range(count)
+    ]
+
+
+def draw_nebula_cloud(
+    canvas: list[list[Cell]],
+    points: list[NebulaPoint],
+    elapsed: float,
+) -> None:
+
+    palette = [
+        C_BLUE,
+        C_VIOLET,
+        C_MAGENTA,
+        C_CYAN,
+    ]
+
+    glyphs = [".", ":", "+", "*"]
+
+    for point in points:
+        wave = math.sin(
+            elapsed * 0.45
+            + point.phase
+            + point.x * 0.025
+        )
+
+        x = int(
+            point.x
+            + math.sin(
+                elapsed * 0.18 + point.phase
+            ) * 2.0
+        )
+
+        y = int(
+            point.y
+            + math.cos(
+                elapsed * 0.13 + point.phase
+            )
+        )
+
+        depth_index = min(
+            len(glyphs) - 1,
+            int(point.depth * len(glyphs)),
+        )
+
+        if wave < -0.65 and point.depth < 0.65:
+            continue
+
+        put(
+            canvas,
+            x,
+            y,
+            glyphs[depth_index],
+            palette[
+                int(
+                    (
+                        point.phase
+                        + elapsed * 0.25
+                    )
+                    % len(palette)
+                )
+            ],
+        )
+
+
+# ---------------------------------------------------------------------------
+# Shared UI
+# ---------------------------------------------------------------------------
+
+def telemetry_panel(
+    canvas: list[list[Cell]],
+    data: dict[str, str],
+    start_y: int,
+) -> None:
+
+    lines = [
+        ("SYSTEM", data["SYSTEM"]),
+        ("LINK", data["LINK"]),
+        ("POWER", data["POWER"]),
+        ("CELL", data["CELL"]),
+        ("UPTIME", data["UPTIME"]),
+    ]
+
+    for index, (key, value) in enumerate(lines):
+        text = f"{key:<8} // {value}"
+
+        colour = (
+            C_GREEN_HI
+            if key in {"SYSTEM", "LINK"}
+            else C_CYAN
+        )
+
+        centred(
+            canvas,
+            start_y + index,
+            text,
+            colour,
+        )
+
+
+def scene_header(
+    canvas: list[list[Cell]],
+    text: str,
+) -> None:
+
+    centred(
+        canvas,
+        2,
+        f"// {text} //",
+        C_CYAN,
+    )
+
+
+def scene_transition(
+    canvas: list[list[Cell]],
+    elapsed: float,
+) -> None:
+
+    if elapsed > 0.42:
+        return
+
     h = len(canvas)
     w = len(canvas[0])
 
-    centre = h // 2
+    progress = elapsed / 0.42
 
-    pulse = (math.sin(elapsed * 1.2) + 1.0) / 2.0
+    radius = int(
+        progress
+        * math.sqrt(
+            (w / 2) ** 2
+            + (h / 2) ** 2
+        )
+    )
 
-    if pulse > 0.12:
-        centred(canvas, centre - 3, "A  R  C  H  M  A  C")
+    cx = w // 2
+    cy = h // 2
 
-    centred(canvas, centre - 1, "G  A  L  A  X  Y")
-    centred(canvas, centre + 1, "--------  O  --------")
+    for angle in range(0, 360, 12):
+        a = math.radians(angle)
 
-    if w >= 70:
-        for i, (key, value) in enumerate(data[:4]):
-            line = f"{key:<8} // {value}"
-            centred(canvas, centre + 4 + i, line)
+        x = cx + int(math.cos(a) * radius)
+        y = cy + int(math.sin(a) * radius * 0.5)
+
+        put(
+            canvas,
+            x,
+            y,
+            "*",
+            C_WHITE,
+        )
+
+    centred(
+        canvas,
+        cy,
+        "//// GALAXY SHIFT ////",
+        C_WHITE,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scenes
+# ---------------------------------------------------------------------------
+
+def scene_deep_space(
+    canvas: list[list[Cell]],
+    elapsed: float,
+    data: dict[str, str],
+) -> None:
+
+    h = len(canvas)
+
+    big_title(
+        canvas,
+        elapsed,
+    )
+
+    if elapsed > 3.0:
+        telemetry_panel(
+            canvas,
+            data,
+            min(h - 7, h // 2 + 7),
+        )
 
 
 def scene_orbit(
-    canvas: list[list[str]],
+    canvas: list[list[Cell]],
     elapsed: float,
-    data: list[tuple[str, str]],
+    data: dict[str, str],
 ) -> None:
+
     h = len(canvas)
     w = len(canvas[0])
 
     cx = w // 2
     cy = h // 2
 
-    radius_x = max(10, min(24, w // 5))
-    radius_y = max(4, min(8, h // 5))
+    radius_x = max(
+        12,
+        min(28, w // 4),
+    )
 
-    # Orbit trace.
-    for deg in range(0, 360, 12):
-        a = math.radians(deg)
+    radius_y = max(
+        4,
+        min(9, h // 5),
+    )
 
-        x = cx + int(math.cos(a) * radius_x)
-        y = cy + int(math.sin(a) * radius_y)
+    scene_header(
+        canvas,
+        "ARCHMAC ORBITAL ARRAY",
+    )
 
-        put(canvas, x, y, ".")
+    # Three orbital rings.
+    for ring, scale in enumerate(
+        (1.0, 0.72, 0.46)
+    ):
+        colour = [
+            C_BLUE,
+            C_VIOLET,
+            C_DIM,
+        ][ring]
 
-    put(canvas, cx - 1, cy, "[O]")
+        for degree in range(0, 360, 8):
+            a = math.radians(degree)
 
-    a = elapsed * 0.7
-    sx = cx + int(math.cos(a) * radius_x)
-    sy = cy + int(math.sin(a) * radius_y)
+            x = cx + int(
+                math.cos(a)
+                * radius_x
+                * scale
+            )
 
-    put(canvas, sx, sy, "*")
+            y = cy + int(
+                math.sin(a)
+                * radius_y
+                * scale
+            )
 
-    centred(canvas, cy - radius_y - 3, "ARCHMAC // ORBITAL")
+            put(
+                canvas,
+                x,
+                y,
+                ".",
+                colour,
+            )
 
-    if h > 22:
-        centred(canvas, cy + radius_y + 3, f"CELL // {dict(data).get('CELL', 'N/A')}")
+    put(
+        canvas,
+        cx - 2,
+        cy,
+        "<O>",
+        C_CYAN_HI,
+    )
 
+    satellites = [
+        (0.62, C_AMBER_HI, "*"),
+        (-0.39, C_VIOLET_HI, "+"),
+        (0.91, C_GREEN_HI, "o"),
+    ]
 
-def scene_signal(
-    canvas: list[list[str]],
-    elapsed: float,
-    data: list[tuple[str, str]],
-) -> None:
-    h = len(canvas)
-    w = len(canvas[0])
+    for speed, colour, glyph in satellites:
+        a = elapsed * speed
 
-    cy = h // 2
-    cx = w // 2
-
-    width = min(60, w - 8)
-    left = cx - width // 2
-
-    for x in range(width):
-        phase = elapsed * 3.0 + x * 0.36
-
-        amp = (
-            math.sin(phase)
-            + 0.45 * math.sin(phase * 2.3)
-            + 0.2 * math.sin(phase * 4.7)
+        x = cx + int(
+            math.cos(a) * radius_x
         )
 
-        y = cy + int(amp * 2.2)
-        put(canvas, left + x, y, "~")
+        y = cy + int(
+            math.sin(a) * radius_y
+        )
 
-    centred(canvas, cy - 6, "GALAXY SIGNAL ACQUISITION")
-    centred(canvas, cy + 6, f"LINK // {dict(data).get('LINK', 'UNKNOWN')}")
+        put(
+            canvas,
+            x,
+            y,
+            glyph,
+            colour,
+        )
+
+    centred(
+        canvas,
+        min(h - 4, cy + radius_y + 4),
+        f"CELL // {data['CELL']}",
+        C_GREEN_HI,
+    )
+
+
+def scene_warp(
+    canvas: list[list[Cell]],
+    elapsed: float,
+    data: dict[str, str],
+    stars: list[Star],
+) -> None:
+
+    h = len(canvas)
+    w = len(canvas[0])
+
+    cx = w / 2
+    cy = h / 2
+
+    scene_header(
+        canvas,
+        "GALAXY TRANSIT",
+    )
+
+    acceleration = min(
+        1.0,
+        elapsed / 4.0,
+    )
+
+    stretch = 1 + int(
+        acceleration * 8
+    )
+
+    palette = [
+        C_DIM,
+        C_BLUE_HI,
+        C_CYAN_HI,
+    ]
+
+    for star in stars:
+        dx = star.x - cx
+        dy = star.y - cy
+
+        scale = (
+            1.0
+            + acceleration
+            * (
+                0.7
+                + star.layer * 0.55
+            )
+        )
+
+        x = int(
+            cx + dx * scale
+        )
+
+        y = int(
+            cy + dy * scale
+        )
+
+        if not (
+            0 <= x < w
+            and 0 <= y < h
+        ):
+            continue
+
+        length = max(
+            1,
+            stretch
+            * (star.layer + 1) // 2,
+        )
+
+        glyph = "-" * length
+
+        put(
+            canvas,
+            x,
+            y,
+            glyph,
+            palette[star.layer],
+        )
+
+    if elapsed > 5.0:
+        centred(
+            canvas,
+            cy := h // 2,
+            "WARP // NOMINAL",
+            C_WHITE,
+        )
+
+
+def scene_radar(
+    canvas: list[list[Cell]],
+    elapsed: float,
+    data: dict[str, str],
+) -> None:
+
+    h = len(canvas)
+    w = len(canvas[0])
+
+    cx = w // 2
+    cy = h // 2
+
+    radius_x = min(
+        30,
+        max(12, w // 4),
+    )
+
+    radius_y = min(
+        12,
+        max(5, h // 3),
+    )
+
+    scene_header(
+        canvas,
+        "DEEP SPACE RADAR",
+    )
+
+    # Rings.
+    for scale, colour in [
+        (1.0, C_GREEN),
+        (0.66, C_DIM),
+        (0.33, C_DIM),
+    ]:
+        for degree in range(
+            0,
+            360,
+            5,
+        ):
+            a = math.radians(degree)
+
+            x = cx + int(
+                math.cos(a)
+                * radius_x
+                * scale
+            )
+
+            y = cy + int(
+                math.sin(a)
+                * radius_y
+                * scale
+            )
+
+            put(
+                canvas,
+                x,
+                y,
+                ".",
+                colour,
+            )
+
+    # Crosshair.
+    for x in range(
+        cx - radius_x,
+        cx + radius_x + 1,
+        4,
+    ):
+        put(
+            canvas,
+            x,
+            cy,
+            "-",
+            C_DARK,
+        )
+
+    for y in range(
+        cy - radius_y,
+        cy + radius_y + 1,
+        2,
+    ):
+        put(
+            canvas,
+            cx,
+            y,
+            "|",
+            C_DARK,
+        )
+
+    # Sweep.
+    angle = elapsed * 1.25
+
+    for step in range(1, radius_x + 1):
+        ratio = step / radius_x
+
+        x = cx + int(
+            math.cos(angle) * step
+        )
+
+        y = cy + int(
+            math.sin(angle)
+            * radius_y
+            * ratio
+        )
+
+        put(
+            canvas,
+            x,
+            y,
+            "*",
+            C_GREEN_HI,
+        )
+
+    # Deterministic contacts.
+    contacts = [
+        (0.32, -0.48),
+        (-0.62, 0.21),
+        (0.67, 0.48),
+    ]
+
+    for rx, ry in contacts:
+        blink = (
+            math.sin(
+                elapsed * 3
+                + rx * 10
+            )
+            > -0.35
+        )
+
+        if blink:
+            put(
+                canvas,
+                cx + int(rx * radius_x),
+                cy + int(ry * radius_y),
+                "O",
+                C_AMBER_HI,
+            )
+
+    centred(
+        canvas,
+        min(h - 3, cy + radius_y + 3),
+        f"LINK // {data['LINK']}",
+        C_GREEN_HI,
+    )
+
+
+def scene_nebula(
+    canvas: list[list[Cell]],
+    elapsed: float,
+    data: dict[str, str],
+    nebula: list[NebulaPoint],
+) -> None:
+
+    h = len(canvas)
+
+    draw_nebula_cloud(
+        canvas,
+        nebula,
+        elapsed,
+    )
+
+    scene_header(
+        canvas,
+        "VELD NEBULA",
+    )
+
+    centred(
+        canvas,
+        h // 2 - 1,
+        "A R C H M A C",
+        C_CYAN_HI,
+    )
+
+    centred(
+        canvas,
+        h // 2 + 1,
+        "GALAXY // DEEP FIELD",
+        C_VIOLET_HI,
+    )
+
+    if elapsed > 5:
+        centred(
+            canvas,
+            h // 2 + 4,
+            f"UPTIME // {data['UPTIME']}",
+            C_AMBER,
+        )
 
 
 def scene_core(
-    canvas: list[list[str]],
+    canvas: list[list[Cell]],
     elapsed: float,
-    data: list[tuple[str, str]],
+    data: dict[str, str],
 ) -> None:
+
     h = len(canvas)
     w = len(canvas[0])
 
-    cy = h // 2
     cx = w // 2
+    cy = h // 2
 
-    rings = [
-        (4, "()"),
-        (8, "<>"),
-        (12, "[]"),
+    scene_header(
+        canvas,
+        "ARCHMAC SYSTEM CORE",
+    )
+
+    pulse = (
+        math.sin(elapsed * 2.0)
+        + 1.0
+    ) / 2.0
+
+    ring_sizes = [
+        5,
+        10,
+        16,
+        23,
     ]
 
-    for radius, chars in rings:
-        pulse = int((math.sin(elapsed * 1.6 + radius) + 1.0) * 1.5)
+    ring_colours = [
+        C_WHITE,
+        C_CYAN_HI,
+        C_BLUE_HI,
+        C_VIOLET,
+    ]
 
-        put(canvas, cx - radius - pulse, cy, chars[0])
-        put(canvas, cx + radius + pulse, cy, chars[1])
+    for ring_index, radius in enumerate(
+        ring_sizes
+    ):
+        expansion = int(
+            pulse
+            * (ring_index + 1)
+        )
 
-    put(canvas, cx - 1, cy, "OO")
-    centred(canvas, cy - 5, "ARCHMAC // SYSTEM CORE")
+        radius += expansion
 
-    if h > 20:
-        kernel = dict(data).get("KERNEL", "?")
-        centred(canvas, cy + 5, f"KERNEL // {kernel}")
+        for degree in range(
+            0,
+            360,
+            max(8, 16 - ring_index * 2),
+        ):
+            a = math.radians(
+                degree
+                + elapsed
+                * (
+                    18
+                    if ring_index % 2 == 0
+                    else -14
+                )
+            )
+
+            x = cx + int(
+                math.cos(a)
+                * radius
+            )
+
+            y = cy + int(
+                math.sin(a)
+                * radius
+                * 0.38
+            )
+
+            put(
+                canvas,
+                x,
+                y,
+                "*",
+                ring_colours[ring_index],
+            )
+
+    put(
+        canvas,
+        cx - 3,
+        cy,
+        "[ O ]",
+        C_WHITE,
+    )
+
+    centred(
+        canvas,
+        cy + 6,
+        f"KERNEL // {data['KERNEL']}",
+        C_CYAN,
+    )
+
+    centred(
+        canvas,
+        cy + 8,
+        "GALAXY // SYSTEM NOMINAL",
+        C_GREEN_HI,
+    )
 
 
-SCENES = [
-    scene_galaxy,
-    scene_orbit,
-    scene_signal,
-    scene_core,
+# ---------------------------------------------------------------------------
+# Scene sequence
+# ---------------------------------------------------------------------------
+
+SCENE_NAMES = [
+    "DEEP SPACE",
+    "ORBITAL",
+    "WARP",
+    "RADAR",
+    "NEBULA",
+    "SYSTEM CORE",
 ]
 
 
-def colourize(frame: str, scene_index: int) -> str:
-    palettes = [
-        C_CYAN,
-        C_VIOLET,
-        C_BLUE,
-        C_GREEN,
-    ]
-
-    colour = palettes[scene_index % len(palettes)]
-
-    # Keep it deliberately restrained.
-    return f"{colour}{frame}{RESET}"
-
+# ---------------------------------------------------------------------------
+# Terminal cleanup
+# ---------------------------------------------------------------------------
 
 def cleanup() -> None:
     global ORIGINAL_TERM
@@ -410,7 +1369,9 @@ def cleanup() -> None:
             + CURSOR_SHOW
             + ALT_OFF
         )
+
         sys.stdout.flush()
+
     except Exception:
         pass
 
@@ -427,41 +1388,85 @@ def cleanup() -> None:
         ORIGINAL_TERM = None
 
 
-def stop_handler(_signum, _frame) -> None:
+def stop_handler(
+    _signum,
+    _frame,
+) -> None:
+
     global RUNNING
     RUNNING = False
 
 
+# ---------------------------------------------------------------------------
+# Main engine
+# ---------------------------------------------------------------------------
+
 def main() -> int:
     global ORIGINAL_TERM
 
-    if not sys.stdin.isatty() or not sys.stdout.isatty():
+    if (
+        not sys.stdin.isatty()
+        or not sys.stdout.isatty()
+    ):
         print(
             "archmac-screensaver: interactive terminal required",
             file=sys.stderr,
         )
+
         return 1
 
-    signal.signal(signal.SIGTERM, stop_handler)
-    signal.signal(signal.SIGINT, stop_handler)
-    signal.signal(signal.SIGHUP, stop_handler)
+    signal.signal(
+        signal.SIGTERM,
+        stop_handler,
+    )
+
+    signal.signal(
+        signal.SIGINT,
+        stop_handler,
+    )
+
+    signal.signal(
+        signal.SIGHUP,
+        stop_handler,
+    )
 
     fd = sys.stdin.fileno()
+
     ORIGINAL_TERM = termios.tcgetattr(fd)
 
     selector = selectors.DefaultSelector()
-    selector.register(sys.stdin, selectors.EVENT_READ)
+
+    selector.register(
+        sys.stdin,
+        selectors.EVENT_READ,
+    )
 
     width, height = terminal_size()
-    stars = make_stars(width, height)
 
-    current_scene = 0
-    scene_started = time.monotonic()
-    last_frame = scene_started
+    stars = make_stars(
+        width,
+        height,
+    )
+
+    nebula = make_nebula(
+        width,
+        height,
+    )
+
+    meteors: list[Meteor] = []
+
+    scene_index = 0
+
+    now = time.monotonic()
+
+    scene_started = now
+    last_frame = now
     last_telemetry = 0.0
+    last_meteor = now
+
     data = telemetry()
 
-    scene_duration = 16.0
+    scene_duration = 14.0
     frame_interval = 1.0 / 24.0
 
     try:
@@ -474,68 +1479,198 @@ def main() -> int:
             + CLEAR
             + HOME
         )
+
         sys.stdout.flush()
 
         while RUNNING:
-            frame_start = time.monotonic()
+            frame_started = time.monotonic()
 
-            # Any keyboard or reported mouse event exits immediately.
+            # Any keyboard or mouse event returns immediately.
             if selector.select(timeout=0):
                 try:
-                    os.read(fd, 128)
+                    os.read(
+                        fd,
+                        256,
+                    )
                 except OSError:
                     pass
+
                 break
 
             new_width, new_height = terminal_size()
 
-            if (new_width, new_height) != (width, height):
-                width, height = new_width, new_height
-                stars = make_stars(width, height)
+            if (
+                new_width != width
+                or new_height != height
+            ):
+                width = new_width
+                height = new_height
+
+                stars = make_stars(
+                    width,
+                    height,
+                )
+
+                nebula = make_nebula(
+                    width,
+                    height,
+                )
 
             now = time.monotonic()
-            dt = min(0.1, now - last_frame)
+
+            dt = min(
+                0.1,
+                now - last_frame,
+            )
+
             last_frame = now
 
-            if now - last_telemetry >= 5.0:
+            if now - last_telemetry >= 5:
                 data = telemetry()
                 last_telemetry = now
 
             if now - scene_started >= scene_duration:
-                current_scene = (current_scene + 1) % len(SCENES)
+                scene_index = (
+                    scene_index + 1
+                ) % len(SCENE_NAMES)
+
                 scene_started = now
 
-            update_stars(stars, dt, width, height)
-
-            canvas = [[" " for _ in range(width)] for _ in range(height)]
-
-            draw_stars(canvas, stars, now)
-
-            SCENES[current_scene](
-                canvas,
-                now - scene_started,
-                data,
+            scene_elapsed = (
+                now - scene_started
             )
 
-            # Small persistent footer.
-            footer = "ANY KEY / MOUSE // RETURN"
+            update_stars(
+                stars,
+                dt,
+                width,
+                height,
+            )
+
+            # Meteor cadence remains deliberately sparse.
+            if (
+                scene_index
+                not in {2, 3}
+                and now - last_meteor
+                > random.uniform(5.5, 9.0)
+            ):
+                meteors.append(
+                    spawn_meteor(
+                        width,
+                        height,
+                    )
+                )
+
+                last_meteor = now
+
+            update_meteors(
+                meteors,
+                dt,
+            )
+
+            canvas = new_canvas(
+                width,
+                height,
+            )
+
+            # WARP has its own star renderer.
+            if scene_index != 2:
+                draw_stars(
+                    canvas,
+                    stars,
+                    now,
+                )
+
+            if scene_index == 0:
+                scene_deep_space(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                )
+
+            elif scene_index == 1:
+                scene_orbit(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                )
+
+            elif scene_index == 2:
+                scene_warp(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                    stars,
+                )
+
+            elif scene_index == 3:
+                scene_radar(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                )
+
+            elif scene_index == 4:
+                scene_nebula(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                    nebula,
+                )
+
+            else:
+                scene_core(
+                    canvas,
+                    scene_elapsed,
+                    data,
+                )
+
+            if scene_index not in {2, 3}:
+                draw_meteors(
+                    canvas,
+                    meteors,
+                )
+
+            scene_transition(
+                canvas,
+                scene_elapsed,
+            )
+
+            footer = (
+                f"ARCHMAC // {SCENE_NAMES[scene_index]}"
+                "     ANY KEY / MOUSE // RETURN"
+            )
+
             put(
                 canvas,
-                max(1, width - len(footer) - 2),
-                max(0, height - 2),
+                max(
+                    1,
+                    width - len(footer) - 2,
+                ),
+                max(
+                    0,
+                    height - 2,
+                ),
                 footer,
+                C_DIM,
             )
-
-            frame = "\n".join("".join(row) for row in canvas)
 
             sys.stdout.write(
                 HOME
-                + colourize(frame, current_scene)
+                + render_canvas(canvas)
             )
+
             sys.stdout.flush()
 
-            spent = time.monotonic() - frame_start
-            delay = frame_interval - spent
+            elapsed_frame = (
+                time.monotonic()
+                - frame_started
+            )
+
+            delay = (
+                frame_interval
+                - elapsed_frame
+            )
 
             if delay > 0:
                 time.sleep(delay)

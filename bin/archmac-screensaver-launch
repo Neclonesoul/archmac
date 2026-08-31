@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -u
+
+SCREENSAVER="$HOME/.local/bin/archmac-screensaver"
+
+# Never stack multiple Galaxy windows.
+if pgrep -f '[a]rchmac-screensaver' >/dev/null 2>&1; then
+    exit 0
+fi
+
+exec kitty \
+    --detach \
+    --start-as=fullscreen \
+    --class archmac-screensaver \
+    --title "ARCHMAC // GALAXY" \
+    "$SCREENSAVER"
