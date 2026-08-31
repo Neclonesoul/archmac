@@ -3,3 +3,6 @@
 *.swp
 *.tmp
 .DS_Store
+
+# Rust build output
+components/archmac-fx/target/

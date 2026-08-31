@@ -33,7 +33,11 @@ for path in \
     config/hypr/hypridle.conf \
     config/hypr/hyprpaper.conf \
     config/quickshell/archmac-galaxy/shell.qml \
-    config/kitty/kitty.conf
+    config/kitty/kitty.conf \
+   components/archmac-fx/Cargo.toml \
+   components/archmac-fx/Cargo.lock \
+   components/archmac-fx/src/main.rs \
+   config/effects/galaxy.fx
 do
     if [[ ! -f "$REPO/$path" ]]; then
         echo "STOP — repository incomplete: $path"
@@ -42,6 +46,13 @@ do
 done
 
 echo "PASS — repository structure"
+
+if ! command -v cargo >/dev/null 2>&1; then
+   echo "STOP — cargo is required to build ARCHMAC-FX."
+   exit 1
+fi
+
+echo "PASS — cargo build tool"
 
 echo
 echo "=== BACKUP ==="
@@ -77,6 +88,7 @@ mkdir -p \
     "$HOME/.config/gtk-4.0" \
     "$HOME/.config/Thunar" \
     "$HOME/.config/archmac/wallpapers" \
+   "$HOME/.config/archmac/effects" \
     "$HOME/.local/bin"
 
 cp -a "$REPO/config/hypr/." "$HOME/.config/hypr/"
@@ -95,6 +107,8 @@ if [[ -f "$REPO/assets/wallpapers/archmac.png" ]]; then
        "$HOME/.config/archmac/wallpapers/archmac.png"
 fi
 
+cp -a "$REPO/config/effects/." "$HOME/.config/archmac/effects/"
+
 for src in "$REPO"/bin/*; do
     [[ -f "$src" ]] || continue
     name="$(basename "$src")"
@@ -107,6 +121,20 @@ done
 
 echo "PASS — configuration installed"
 echo "PASS — helper commands installed"
+
+echo
+echo "=== BUILD ARCHMAC-FX ==="
+
+cargo build \
+   --release \
+   --locked \
+   --manifest-path "$REPO/components/archmac-fx/Cargo.toml"
+
+install -m 0755 \
+   "$REPO/components/archmac-fx/target/release/archmac-fx" \
+   "$HOME/.local/bin/archmac-fx"
+
+echo "PASS — ARCHMAC-FX built and installed"
 
 echo
 echo "=== REQUIRED RUNTIME ==="

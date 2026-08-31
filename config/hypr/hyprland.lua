@@ -432,7 +432,7 @@ hl.window_rule({
 })
 
 hl.on("hyprland.start", function ()
- 
+
 hl.exec_cmd(home .. "/.local/bin/archmac-shell start")
 
 
