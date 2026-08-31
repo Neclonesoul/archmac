@@ -1,0 +1,551 @@
+#!/usr/bin/env python3
+
+"""
+ARCHMAC Galaxy Screensaver
+
+Fullscreen procedural ANSI screensaver for terminal use.
+
+Design:
+- alternate-screen only
+- restores terminal on every exit path
+- no Ratatui inline viewport
+- no third-party Python packages
+- exits on any keyboard or mouse input
+- procedural multi-layer starfield
+- rotating Galaxy scenes
+- live ARCHMAC telemetry
+"""
+
+from __future__ import annotations
+
+import math
+import os
+import random
+import selectors
+import shutil
+import signal
+import subprocess
+import sys
+import termios
+import time
+import tty
+from dataclasses import dataclass
+
+
+ESC = "\x1b"
+CSI = f"{ESC}["
+
+ALT_ON = f"{CSI}?1049h"
+ALT_OFF = f"{CSI}?1049l"
+CURSOR_HIDE = f"{CSI}?25l"
+CURSOR_SHOW = f"{CSI}?25h"
+CLEAR = f"{CSI}2J"
+HOME = f"{CSI}H"
+
+# Mouse movement/button reporting so touching the mouse wakes the saver.
+MOUSE_ON = f"{CSI}?1003h{CSI}?1006h"
+MOUSE_OFF = f"{CSI}?1003l{CSI}?1006l"
+
+RESET = f"{CSI}0m"
+BOLD = f"{CSI}1m"
+DIM = f"{CSI}2m"
+
+C_DARK = f"{CSI}38;5;240m"
+C_DIM = f"{CSI}38;5;245m"
+C_SOFT = f"{CSI}38;5;250m"
+C_WHITE = f"{CSI}38;5;255m"
+C_CYAN = f"{CSI}38;5;117m"
+C_BLUE = f"{CSI}38;5;75m"
+C_VIOLET = f"{CSI}38;5;141m"
+C_AMBER = f"{CSI}38;5;221m"
+C_GREEN = f"{CSI}38;5;120m"
+
+
+RUNNING = True
+ORIGINAL_TERM = None
+
+
+@dataclass
+class Star:
+    x: float
+    y: float
+    speed: float
+    phase: float
+    layer: int
+
+
+def safe_run(*cmd: str) -> str:
+    try:
+        p = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=0.7,
+            check=False,
+        )
+        return p.stdout.strip()
+    except Exception:
+        return ""
+
+
+def battery() -> str:
+    root = "/sys/class/power_supply"
+
+    try:
+        for name in os.listdir(root):
+            base = os.path.join(root, name)
+            typ = read_file(os.path.join(base, "type"))
+
+            if typ != "Battery":
+                continue
+
+            capacity = read_file(os.path.join(base, "capacity")) or "?"
+            status = read_file(os.path.join(base, "status")).upper()
+
+            return f"{capacity}% {status}"
+    except OSError:
+        pass
+
+    return "N/A"
+
+
+def read_file(path: str) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def network() -> str:
+    value = safe_run("nmcli", "-t", "-f", "STATE", "general").lower()
+
+    if "connected" in value:
+        return "ONLINE"
+
+    if value:
+        return value.upper()
+
+    return "UNKNOWN"
+
+
+def power_profile() -> str:
+    value = safe_run("powerprofilesctl", "get")
+    return value.upper() if value else "UNKNOWN"
+
+
+def uptime() -> str:
+    try:
+        seconds = float(read_file("/proc/uptime").split()[0])
+    except Exception:
+        return "UNKNOWN"
+
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+
+    if hours:
+        return f"{hours}H {minutes:02d}M"
+
+    return f"{minutes}M"
+
+
+def telemetry() -> list[tuple[str, str]]:
+    return [
+        ("SYSTEM", "NOMINAL"),
+        ("LINK", network()),
+        ("POWER", power_profile()),
+        ("CELL", battery()),
+        ("KERNEL", os.uname().release),
+        ("UPTIME", uptime()),
+    ]
+
+
+def terminal_size() -> tuple[int, int]:
+    size = shutil.get_terminal_size((100, 30))
+    return max(40, size.columns), max(18, size.lines)
+
+
+def put(canvas: list[list[str]], x: int, y: int, text: str) -> None:
+    if y < 0 or y >= len(canvas):
+        return
+
+    width = len(canvas[y])
+
+    if x >= width:
+        return
+
+    start = max(0, x)
+    source_start = max(0, -x)
+
+    for i, ch in enumerate(text[source_start:]):
+        xx = start + i
+
+        if xx >= width:
+            break
+
+        canvas[y][xx] = ch
+
+
+def centred(canvas: list[list[str]], y: int, text: str) -> None:
+    if not canvas:
+        return
+
+    width = len(canvas[0])
+    x = max(0, (width - visible_len(text)) // 2)
+    put(canvas, x, y, text)
+
+
+def visible_len(text: str) -> int:
+    # Text passed here is normally uncoloured.
+    return len(text)
+
+
+def make_stars(width: int, height: int) -> list[Star]:
+    count = max(45, min(180, (width * height) // 22))
+    stars: list[Star] = []
+
+    for _ in range(count):
+        layer = random.choices([0, 1, 2], weights=[6, 3, 1])[0]
+
+        stars.append(
+            Star(
+                x=random.random() * width,
+                y=random.random() * height,
+                speed=(0.7 + layer * 0.65) * random.uniform(0.7, 1.25),
+                phase=random.random() * math.tau,
+                layer=layer,
+            )
+        )
+
+    return stars
+
+
+def update_stars(
+    stars: list[Star],
+    dt: float,
+    width: int,
+    height: int,
+) -> None:
+    for star in stars:
+        star.x -= star.speed * dt
+
+        if star.x < 0:
+            star.x = width - 1
+            star.y = random.random() * height
+            star.phase = random.random() * math.tau
+
+
+def draw_stars(
+    canvas: list[list[str]],
+    stars: list[Star],
+    now: float,
+) -> None:
+    glyphs = [".", "+", "*"]
+
+    for star in stars:
+        x = int(star.x)
+        y = int(star.y)
+
+        shimmer = math.sin(now * (1.0 + star.layer * 0.25) + star.phase)
+
+        if star.layer == 0 and shimmer < -0.45:
+            continue
+
+        glyph = glyphs[star.layer]
+        put(canvas, x, y, glyph)
+
+
+def scene_galaxy(
+    canvas: list[list[str]],
+    elapsed: float,
+    data: list[tuple[str, str]],
+) -> None:
+    h = len(canvas)
+    w = len(canvas[0])
+
+    centre = h // 2
+
+    pulse = (math.sin(elapsed * 1.2) + 1.0) / 2.0
+
+    if pulse > 0.12:
+        centred(canvas, centre - 3, "A  R  C  H  M  A  C")
+
+    centred(canvas, centre - 1, "G  A  L  A  X  Y")
+    centred(canvas, centre + 1, "--------  O  --------")
+
+    if w >= 70:
+        for i, (key, value) in enumerate(data[:4]):
+            line = f"{key:<8} // {value}"
+            centred(canvas, centre + 4 + i, line)
+
+
+def scene_orbit(
+    canvas: list[list[str]],
+    elapsed: float,
+    data: list[tuple[str, str]],
+) -> None:
+    h = len(canvas)
+    w = len(canvas[0])
+
+    cx = w // 2
+    cy = h // 2
+
+    radius_x = max(10, min(24, w // 5))
+    radius_y = max(4, min(8, h // 5))
+
+    # Orbit trace.
+    for deg in range(0, 360, 12):
+        a = math.radians(deg)
+
+        x = cx + int(math.cos(a) * radius_x)
+        y = cy + int(math.sin(a) * radius_y)
+
+        put(canvas, x, y, ".")
+
+    put(canvas, cx - 1, cy, "[O]")
+
+    a = elapsed * 0.7
+    sx = cx + int(math.cos(a) * radius_x)
+    sy = cy + int(math.sin(a) * radius_y)
+
+    put(canvas, sx, sy, "*")
+
+    centred(canvas, cy - radius_y - 3, "ARCHMAC // ORBITAL")
+
+    if h > 22:
+        centred(canvas, cy + radius_y + 3, f"CELL // {dict(data).get('CELL', 'N/A')}")
+
+
+def scene_signal(
+    canvas: list[list[str]],
+    elapsed: float,
+    data: list[tuple[str, str]],
+) -> None:
+    h = len(canvas)
+    w = len(canvas[0])
+
+    cy = h // 2
+    cx = w // 2
+
+    width = min(60, w - 8)
+    left = cx - width // 2
+
+    for x in range(width):
+        phase = elapsed * 3.0 + x * 0.36
+
+        amp = (
+            math.sin(phase)
+            + 0.45 * math.sin(phase * 2.3)
+            + 0.2 * math.sin(phase * 4.7)
+        )
+
+        y = cy + int(amp * 2.2)
+        put(canvas, left + x, y, "~")
+
+    centred(canvas, cy - 6, "GALAXY SIGNAL ACQUISITION")
+    centred(canvas, cy + 6, f"LINK // {dict(data).get('LINK', 'UNKNOWN')}")
+
+
+def scene_core(
+    canvas: list[list[str]],
+    elapsed: float,
+    data: list[tuple[str, str]],
+) -> None:
+    h = len(canvas)
+    w = len(canvas[0])
+
+    cy = h // 2
+    cx = w // 2
+
+    rings = [
+        (4, "()"),
+        (8, "<>"),
+        (12, "[]"),
+    ]
+
+    for radius, chars in rings:
+        pulse = int((math.sin(elapsed * 1.6 + radius) + 1.0) * 1.5)
+
+        put(canvas, cx - radius - pulse, cy, chars[0])
+        put(canvas, cx + radius + pulse, cy, chars[1])
+
+    put(canvas, cx - 1, cy, "OO")
+    centred(canvas, cy - 5, "ARCHMAC // SYSTEM CORE")
+
+    if h > 20:
+        kernel = dict(data).get("KERNEL", "?")
+        centred(canvas, cy + 5, f"KERNEL // {kernel}")
+
+
+SCENES = [
+    scene_galaxy,
+    scene_orbit,
+    scene_signal,
+    scene_core,
+]
+
+
+def colourize(frame: str, scene_index: int) -> str:
+    palettes = [
+        C_CYAN,
+        C_VIOLET,
+        C_BLUE,
+        C_GREEN,
+    ]
+
+    colour = palettes[scene_index % len(palettes)]
+
+    # Keep it deliberately restrained.
+    return f"{colour}{frame}{RESET}"
+
+
+def cleanup() -> None:
+    global ORIGINAL_TERM
+
+    try:
+        sys.stdout.write(
+            RESET
+            + MOUSE_OFF
+            + CURSOR_SHOW
+            + ALT_OFF
+        )
+        sys.stdout.flush()
+    except Exception:
+        pass
+
+    if ORIGINAL_TERM is not None:
+        try:
+            termios.tcsetattr(
+                sys.stdin.fileno(),
+                termios.TCSADRAIN,
+                ORIGINAL_TERM,
+            )
+        except Exception:
+            pass
+
+        ORIGINAL_TERM = None
+
+
+def stop_handler(_signum, _frame) -> None:
+    global RUNNING
+    RUNNING = False
+
+
+def main() -> int:
+    global ORIGINAL_TERM
+
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        print(
+            "archmac-screensaver: interactive terminal required",
+            file=sys.stderr,
+        )
+        return 1
+
+    signal.signal(signal.SIGTERM, stop_handler)
+    signal.signal(signal.SIGINT, stop_handler)
+    signal.signal(signal.SIGHUP, stop_handler)
+
+    fd = sys.stdin.fileno()
+    ORIGINAL_TERM = termios.tcgetattr(fd)
+
+    selector = selectors.DefaultSelector()
+    selector.register(sys.stdin, selectors.EVENT_READ)
+
+    width, height = terminal_size()
+    stars = make_stars(width, height)
+
+    current_scene = 0
+    scene_started = time.monotonic()
+    last_frame = scene_started
+    last_telemetry = 0.0
+    data = telemetry()
+
+    scene_duration = 16.0
+    frame_interval = 1.0 / 24.0
+
+    try:
+        tty.setcbreak(fd)
+
+        sys.stdout.write(
+            ALT_ON
+            + CURSOR_HIDE
+            + MOUSE_ON
+            + CLEAR
+            + HOME
+        )
+        sys.stdout.flush()
+
+        while RUNNING:
+            frame_start = time.monotonic()
+
+            # Any keyboard or reported mouse event exits immediately.
+            if selector.select(timeout=0):
+                try:
+                    os.read(fd, 128)
+                except OSError:
+                    pass
+                break
+
+            new_width, new_height = terminal_size()
+
+            if (new_width, new_height) != (width, height):
+                width, height = new_width, new_height
+                stars = make_stars(width, height)
+
+            now = time.monotonic()
+            dt = min(0.1, now - last_frame)
+            last_frame = now
+
+            if now - last_telemetry >= 5.0:
+                data = telemetry()
+                last_telemetry = now
+
+            if now - scene_started >= scene_duration:
+                current_scene = (current_scene + 1) % len(SCENES)
+                scene_started = now
+
+            update_stars(stars, dt, width, height)
+
+            canvas = [[" " for _ in range(width)] for _ in range(height)]
+
+            draw_stars(canvas, stars, now)
+
+            SCENES[current_scene](
+                canvas,
+                now - scene_started,
+                data,
+            )
+
+            # Small persistent footer.
+            footer = "ANY KEY / MOUSE // RETURN"
+            put(
+                canvas,
+                max(1, width - len(footer) - 2),
+                max(0, height - 2),
+                footer,
+            )
+
+            frame = "\n".join("".join(row) for row in canvas)
+
+            sys.stdout.write(
+                HOME
+                + colourize(frame, current_scene)
+            )
+            sys.stdout.flush()
+
+            spent = time.monotonic() - frame_start
+            delay = frame_interval - spent
+
+            if delay > 0:
+                time.sleep(delay)
+
+    finally:
+        selector.close()
+        cleanup()
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
