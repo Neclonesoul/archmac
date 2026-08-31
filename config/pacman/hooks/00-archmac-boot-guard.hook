@@ -1,0 +1,17 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = linux
+Target = linux-lts
+Target = linux-zen
+Target = linux-hardened
+Target = mkinitcpio
+Target = intel-ucode
+
+[Action]
+Description = ARCHMAC: verifying real ESP before boot-critical package changes...
+When = PreTransaction
+Exec = /usr/local/bin/archmac-boot-guard
+AbortOnFail

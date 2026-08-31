@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+"$SCRIPT_DIR/archmac-boot-guard"
+
+printf '\nARCHMAC UPGRADE: preflight passed.\n'
+printf 'About to run: sudo pacman -Syu\n\n'
+
+read -r -p "Continue with full system upgrade? [y/N] " answer
+
+case "$answer" in
+    y|Y|yes|YES)
+        sudo pacman -Syu
+        ;;
+    *)
+        printf 'ARCHMAC UPGRADE: cancelled.\n'
+        exit 0
+        ;;
+esac

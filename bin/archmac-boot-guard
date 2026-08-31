@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+EXPECTED_ESP_UUID="67E3-17ED"
+BOOT_MOUNT="/boot"
+KERNEL_PATH="/boot/EFI/ARCHROOT/vmlinuz-linux"
+INITRAMFS_PATH="/boot/EFI/ARCHROOT/linux/initramfs-linux.img"
+
+fail() {
+    printf 'ARCHMAC BOOT GUARD: FAIL — %s\n' "$*" >&2
+    exit 1
+}
+
+pass() {
+    printf 'ARCHMAC BOOT GUARD: PASS — %s\n' "$*"
+}
+
+printf '\n=== ARCHMAC BOOT SAFETY GATE ===\n'
+
+mountpoint -q "$BOOT_MOUNT" \
+    || fail "/boot is not a mounted filesystem"
+
+source_dev="$(findmnt -n -o SOURCE "$BOOT_MOUNT")"
+fstype="$(findmnt -n -o FSTYPE "$BOOT_MOUNT")"
+
+[[ "$fstype" == "vfat" ]] \
+    || fail "/boot filesystem is '$fstype', expected 'vfat'"
+
+pass "/boot is mounted as vfat"
+
+resolved_dev="$(readlink -f "$source_dev")"
+esp_uuid="$(lsblk -no UUID "$resolved_dev" 2>/dev/null | head -n1)"
+
+[[ "$esp_uuid" == "$EXPECTED_ESP_UUID" ]] \
+    || fail "/boot UUID is '${esp_uuid:-unknown}', expected '$EXPECTED_ESP_UUID'"
+
+pass "ESP UUID matches $EXPECTED_ESP_UUID"
+
+[[ -s "$KERNEL_PATH" ]] \
+    || fail "kernel missing: $KERNEL_PATH"
+
+[[ -s "$INITRAMFS_PATH" ]] \
+    || fail "initramfs missing: $INITRAMFS_PATH"
+
+pass "ARCHROOT kernel and initramfs exist"
+
+running_kernel="$(uname -r)"
+
+[[ -d "/usr/lib/modules/$running_kernel" ]] \
+    || fail "no modules for running kernel $running_kernel"
+
+pass "running kernel $running_kernel has matching modules"
+
+grep -Eq \
+    '^[[:space:]]*UUID=67E3-17ED[[:space:]]+/boot[[:space:]]+vfat([[:space:]]|$)' \
+    /etc/fstab \
+    || fail "/etc/fstab does not persist the expected ESP at /boot"
+
+pass "/etc/fstab persists the real ESP"
+
+printf '\nARCHMAC BOOT GUARD: SAFE\n'

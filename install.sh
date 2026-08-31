@@ -37,7 +37,10 @@ for path in \
    components/archmac-fx/Cargo.toml \
    components/archmac-fx/Cargo.lock \
    components/archmac-fx/src/main.rs \
-   config/effects/galaxy.fx
+   config/effects/galaxy.fx \
+   bin/archmac-boot-guard \
+   bin/archmac-upgrade \
+   config/pacman/hooks/00-archmac-boot-guard.hook
 do
     if [[ ! -f "$REPO/$path" ]]; then
         echo "STOP — repository incomplete: $path"
@@ -121,6 +124,32 @@ done
 
 echo "PASS — configuration installed"
 echo "PASS — helper commands installed"
+
+echo
+echo "=== BOOT SAFETY ENFORCEMENT ==="
+
+if ! sudo install -Dm755 \
+   "$REPO/bin/archmac-boot-guard" \
+   /usr/local/bin/archmac-boot-guard
+then
+   echo "STOP — failed to install system boot guard."
+   exit 1
+fi
+
+if ! sudo install -Dm644 \
+   "$REPO/config/pacman/hooks/00-archmac-boot-guard.hook" \
+   /etc/pacman.d/hooks/00-archmac-boot-guard.hook
+then
+   echo "STOP — failed to install pacman boot-safety hook."
+   exit 1
+fi
+
+if ! sudo /usr/local/bin/archmac-boot-guard; then
+   echo "STOP — ARCHMAC boot safety gate did not pass."
+   exit 1
+fi
+
+echo "PASS — machine-level boot safety enforcement installed"
 
 echo
 echo "=== BUILD ARCHMAC-FX ==="
