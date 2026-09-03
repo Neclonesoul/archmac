@@ -1,67 +1,85 @@
+<div align="center">
+
 # ARCHMAC
 
+### Reproducible Arch Linux workstation for the Apple MacBookPro9,2
+
+**Arch Linux · Hyprland · ARCHMAC Galaxy · Quickshell · Wayland**
+
+**Beautiful. Repairable. Yours.**
+
+</div>
+
+---
+
+## What is ARCHMAC?
+
 ARCHMAC is a reproducible Arch Linux desktop environment built around
-Hyprland and the ARCHMAC Galaxy Quickshell shell.
+**Hyprland** and the **ARCHMAC Galaxy Quickshell shell**.
 
-The reference platform is the Apple MacBookPro9,2. The architecture is
-intended to remain inspectable, repairable, portable, and extensible to
-additional hardware profiles.
+The reference platform is the **Apple MacBookPro9,2 — 13-inch, Mid 2012**.
 
-> Beautiful. Repairable. Yours.
+ARCHMAC is designed to remain:
 
-## Status
+- inspectable
+- repairable
+- reproducible
+- portable
+- hardware-aware
+- recoverable
 
-ARCHMAC Galaxy is the current development baseline.
+This repository is not merely a dotfiles archive.
 
-Galaxy replaces the previous Waybar/Mako-centred desktop with a unified
-Quickshell shell using centralized services for system state, telemetry,
-workspaces, notifications, launching, system controls, OSD, session controls,
-and ARCHMAC modes.
+It is the engineering record and canonical configuration of a real working
+Linux workstation.
 
-Galaxy is currently undergoing release verification before promotion to
-the canonical main branch.
+---
 
-## Hardware target
+## Reference platform
 
-Reference hardware:
+| Component | ARCHMAC |
+|---|---|
+| Hardware | Apple MacBookPro9,2 |
+| Model | 13-inch, Mid 2012 |
+| CPU | Intel Core i5-3210M |
+| Graphics | Intel HD Graphics 4000 |
+| OS | Arch Linux |
+| Kernel | Linux 7.1.11-arch1-1 |
+| Session | Wayland |
+| Compositor | Hyprland 0.56.2 |
+| Desktop shell | ARCHMAC Galaxy |
+| Shell framework | Quickshell |
+| Terminal | Kitty |
+| Audio | PipeWire / WirePlumber |
+| Network | NetworkManager |
+| Bluetooth | BlueZ |
 
-- Apple MacBookPro9,2 (13-inch, Mid 2012)
-- Intel Core i5-3210M
-- Intel HD Graphics 4000
-- Broadcom Wi-Fi
-- Apple SMC keyboard backlight
-- Kingston A400 SSD
+---
 
-ARCHMAC configuration must remain free of private machine identifiers and
-hard-coded user home paths.
+## ARCHMAC Galaxy
 
-## Desktop architecture
+Galaxy is the current ARCHMAC desktop shell.
 
-Primary runtime:
+It replaces the previous Waybar/Mako-centred desktop with a unified
+Quickshell environment using centralized services for system state and
+interaction.
 
-- Arch Linux
-- Hyprland
-- Quickshell / ARCHMAC Galaxy
-- Kitty
-- PipeWire / WirePlumber
-- NetworkManager
-- BlueZ
-- Hyprpaper
-- Hypridle / Hyprlock
-- GTK 3 / GTK 4
-- Qt 6 Wayland
-
-Galaxy currently provides:
+Galaxy provides:
 
 - top bar
 - workspace state and navigation
 - native system tray
 - Control Centre
-- Wi-Fi and Bluetooth integration
-- audio, brightness, battery and power state
-- hardware telemetry and hardware monitor
+- Wi-Fi integration
+- Bluetooth integration
+- audio control
+- brightness control
+- battery and power state
+- hardware telemetry
+- hardware monitor
 - system OSD
-- notification server, toasts and history
+- notification server
+- notification history
 - application launcher
 - calculator
 - searchable clipboard history
@@ -70,19 +88,14 @@ Galaxy currently provides:
 - lock/session integration
 - power/session menu
 - ARCHMAC mode integration
-- Material Symbols shell icon system
 
-Waybar and Mako are no longer active primary shell components.
-
-Legacy utilities may remain available as deliberate compatibility or
-recovery fallbacks until their replacements have completed release
-verification.
+---
 
 ## Engineering doctrine
 
-ARCHMAC follows these rules:
+ARCHMAC follows ten rules:
 
-1. Inspect before modifying.
+1. **Inspect before modifying.**
 2. Preserve working behaviour until its replacement is proven.
 3. Maintain one authoritative state owner per subsystem.
 4. Prefer event-driven native interfaces over duplicated polling.
@@ -95,86 +108,132 @@ ARCHMAC follows these rules:
 
 Development flow:
 
-Inspect -> Understand -> Change -> Verify -> Diff -> Commit
+    Inspect → Understand → Change → Verify → Diff → Commit
 
-## ARCHMAC modes
+---
 
-Current modes:
+## Operating modes
 
-- Fancy — full desktop effects with balanced power
-- Performance — reduced compositor overhead
-- Battery — reduced visual overhead and power-saving behaviour
+### Fancy
+Full desktop effects with balanced power.
 
-Mode state is shared with Galaxy rather than independently inferred by shell
-components.
+### Performance
+Reduced compositor overhead for sustained workloads.
 
-## Installation
+### Battery
+Reduced visual overhead and power-saving behaviour.
 
-ARCHMAC intentionally does not modify EFI, NVRAM, partition tables,
-filesystems, or bootloaders.
-
-Desktop installation and boot recovery are separate concerns.
-
-From a checked-out repository run:
-
-    ./install.sh
-
-The installer backs up managed configuration, installs Hyprland and Galaxy,
-installs ARCHMAC helpers, and verifies required runtime dependencies.
-
-Start a fresh Hyprland session after installation.
-
-## Galaxy recovery
-
-Galaxy can be inspected or restarted independently of Hyprland:
-
-    archmac-shell status
-    archmac-shell restart
-    archmac-shell log
-
-If Galaxy fails, Hyprland and terminal access should remain usable.
-
-See docs/RECOVERY.md.
+---
 
 ## Repository layout
 
-- config/ — canonical desktop configuration
-- config/quickshell/archmac-galaxy/ — Galaxy shell
-- bin/ — ARCHMAC helper commands
-- manifests/ — package manifests
-- docs/ — operational documentation
-- state/ — known-good reference state
+    archmac/
+    ├── .github/
+    ├── assets/
+    ├── bin/
+    ├── config/
+    ├── docs/
+    ├── manifests/
+    ├── state/
+    ├── install.sh
+    ├── CHANGELOG.md
+    └── README.md
 
-## Wallpaper workflow
+---
 
-ARCHMAC integrates Hyprpaper with Thunar.
+## Boot and recovery discipline
 
-Right-click a supported image and select Set as ARCHMAC Wallpaper, or use:
+Before kernel or boot changes, inspect the actual machine state:
 
-    archmac-wallpaper /path/to/image.jpg
+    findmnt /boot
+    findmnt /efi 2>/dev/null || true
+    lsblk -f
+    bootctl status
+    uname -r
+    pacman -Q linux
 
-See docs/WALLPAPERS.md.
+Before rebooting after kernel work, verify:
 
-## Release verification
+1. the actual EFI/boot filesystem is mounted;
+2. the kernel image exists;
+3. the initramfs exists;
+4. matching kernel modules exist;
+5. boot entries reference the correct paths.
 
-Galaxy is release-ready only after verification that:
+Recovery takes precedence over convenience.
 
-- Galaxy autostarts correctly
-- exactly one intended Galaxy shell runs
-- Hyprland remains usable if Galaxy stops
-- Galaxy can restart without restarting Hyprland
-- workspaces and gestures work
-- launcher and clipboard work
-- notifications and OSD work
-- audio and brightness work
-- tray and Control Centre work
-- lock and session controls work
-- ARCHMAC modes work
-- wallpaper persists
-- expected keybindings are registered
-- external monitor behaviour is correct
-- suspend/resume is reliable
-- logout/login is reliable
-- cold reboot is reliable
-- fresh installation is reproducible
-- CI is green
+---
+
+## Known-good state
+
+ARCHMAC keeps reference state so faults can be compared against a working
+machine.
+
+The goal is to answer:
+
+> What did the system look like when it was known to work?
+
+---
+
+## Project philosophy
+
+    SOVEREIGN WORKSTATION
+            │
+            ├── understand the machine
+            ├── reduce unnecessary software
+            ├── keep configuration reproducible
+            ├── preserve recovery paths
+            ├── automate repeatable work
+            ├── record known-good state
+            └── remove friction before adding complexity
+
+The goal is:
+
+> **minimum friction per unit of useful work**
+
+---
+
+## Contributing
+
+Useful contributions include:
+
+- MacBookPro9,2 hardware improvements
+- Arch Linux compatibility fixes
+- Hyprland / Wayland improvements
+- Quickshell / Galaxy fixes
+- recovery improvements
+- documentation improvements
+- validation improvements
+- simplification
+
+---
+
+## Security
+
+Never commit:
+
+- passwords
+- API keys
+- private keys
+- tokens
+- cookies
+- credentials
+- machine-specific secrets
+
+---
+
+## Maintainer
+
+**Tyson Barnes**
+
+Engineering · Automation · Systems · Software
+
+---
+
+<div align="center">
+
+### ARCHMAC
+
+**Old hardware. Modern workstation. Known state.**
+
+</div>

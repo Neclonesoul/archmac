@@ -1,0 +1,17 @@
+name: Improvement
+description: Propose a focused ARCHMAC improvement
+title: "[IMPROVEMENT] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+    validations:
+      required: true
