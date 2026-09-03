@@ -10,6 +10,10 @@
 
 </div>
 
+<p align="center">
+  <img src="assets/screenshots/archmac-desktop.webp" alt="ARCHMAC running Hyprland and Galaxy on an Apple MacBookPro9,2" width="100%">
+</p>
+
 ---
 
 ## What is ARCHMAC?
